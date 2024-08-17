@@ -5,12 +5,7 @@ from app.services.report_generation_service import create_report
 from app.services.chatbot_service import get_chatbot_response
 from app.services.image_enhancement_service import enhance_image 
 from app.services.head_circumference_service import *
-from app.services.Speech_to_text import transcribe_audio 
-from PIL import Image
-import traceback
-import base64
-import tempfile
-import json
+
 bp = Blueprint('api', __name__)
 
 @bp.route('/upload', methods=['POST'])
