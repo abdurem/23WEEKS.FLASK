@@ -111,3 +111,4 @@ Werkzeug==3.0.3
 wheel==0.44.0
 wrapt==1.16.0
 zopfli==0.2.3
+gunicorn
