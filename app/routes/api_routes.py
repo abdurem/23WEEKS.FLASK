@@ -63,6 +63,7 @@ def enhance_image_route():
     try:
         image_bytes = file.read()
         enhanced_image_bytes = enhance_image(image_bytes)
+        
         if enhanced_image_bytes is None:
             raise ValueError('Image enhancement failed')
 

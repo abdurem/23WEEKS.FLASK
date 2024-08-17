@@ -8,8 +8,10 @@ Brotli==1.1.0
 cachetools==5.4.0
 certifi==2024.7.4
 cffi==1.17.0
+chardet==5.2.0
 charset-normalizer==3.3.2
 click==8.1.7
+coloredlogs==15.0.1
 cssselect2==0.7.0
 filelock==3.15.4
 Flask==3.0.3
@@ -35,6 +37,7 @@ grpcio-status==1.62.3
 h5py==3.11.0
 html5lib==1.1
 httplib2==0.22.0
+humanfriendly==10.0
 idna==3.7
 itsdangerous==2.2.0
 Jinja2==3.1.4
@@ -55,6 +58,8 @@ namex==0.0.8
 networkx==3.3
 numba==0.60.0
 numpy==1.26.4
+onnx==1.16.2
+onnxruntime==1.19.0
 openai-whisper @ git+https://github.com/openai/whisper.git@ba3f3cd54b0e5b8ce1ab3de13e32122d0d5f98ab
 opencv-python==4.10.0.84
 opt-einsum==3.3.0
@@ -76,6 +81,7 @@ pyphen==0.16.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 regex==2024.7.24
+reportlab==4.2.2
 requests==2.32.3
 rich==13.7.1
 rsa==4.9
@@ -105,5 +111,3 @@ Werkzeug==3.0.3
 wheel==0.44.0
 wrapt==1.16.0
 zopfli==0.2.3
-gunicorn
-reportlab
