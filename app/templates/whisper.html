@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whisper Speech-to-Text</title>
+</head>
+
+<body>
+    <h1>Speak and See the Transcribed Text</h1>
+    <button id="record">Start Recording</button>
+    <button id="stop" disabled>Stop Recording</button>
+    <p id="status"></p>
+    <h3>Transcribed Text:</h3>
+    <p id="transcription">...</p>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        document.getElementById("record").onclick = async function () {
+            document.getElementById("status").innerText = "Recording...";
+            document.getElementById("record").disabled = true;
+            document.getElementById("stop").disabled = false;
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'audio.wav');
+
+                document.getElementById("status").innerText = "Processing...";
+
+                const response = await fetch('/transcribe', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                document.getElementById("transcription").innerText = result.transcription;
+                document.getElementById("status").innerText = "Recording stopped.";
+            };
+
+            mediaRecorder.start();
+        };
+
+        document.getElementById("stop").onclick = function () {
+            document.getElementById("stop").disabled = true;
+            document.getElementById("record").disabled = false;
+            mediaRecorder.stop();
+        };
+    </script>
+</body>
+
+</html>

@@ -1,14 +1,12 @@
 import os
+import ssl
 from flask_migrate import upgrade
 from app import create_app, db
 
+ssl._create_default_https_context = ssl._create_unverified_context
+
 app = create_app()
 
-def run_migrations():
-    with app.app_context():
-        upgrade()
-
 if __name__ == "__main__":
-    run_migrations()
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True, use_reloader=True)

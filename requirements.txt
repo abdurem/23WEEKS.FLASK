@@ -60,7 +60,6 @@ numba==0.60.0
 numpy==1.26.4
 onnx==1.16.2
 onnxruntime==1.19.0
-openai-whisper @ git+https://github.com/openai/whisper.git@ba3f3cd54b0e5b8ce1ab3de13e32122d0d5f98ab
 opencv-python==4.10.0.84
 opt-einsum==3.3.0
 optree==0.12.1
@@ -94,7 +93,6 @@ SQLAlchemy==2.0.32
 sympy==1.13.2
 tensorboard==2.17.1
 tensorboard-data-server==0.7.2
-tensorflow==2.17.0
 termcolor==2.4.0
 threadpoolctl==3.5.0
 tiktoken==0.7.0

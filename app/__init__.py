@@ -10,7 +10,7 @@ migrate = Migrate()
 jwt = JWTManager()
 
 def create_app(config_class=Config):
-    app = Flask(__name__, static_folder='../static')
+    app = Flask(__name__, static_folder='../static', template_folder='templates')
     app.config.from_object(config_class)
 
     CORS(app, resources={r"/*": {"origins": "*"}})

@@ -6,7 +6,6 @@ from app.services.chatbot_service import get_chatbot_response
 from app.services.image_enhancement_service import enhance_image 
 from app.services.head_circumference_service import *
 from app.services.Speech_to_text import transcribe_audio 
-from app.services.Smart_reminders_service import text_to_events
 from PIL import Image
 import traceback
 import base64
@@ -28,28 +27,6 @@ def upload_file():
 @bp.route('/')
 def index():
     return "Flask server is running"
-
-@bp.route('/speech-to-text', methods=['POST'])
-def speech_to_text():
-    if 'audio_data' not in request.files:
-        return jsonify({'error': 'No audio file provided'}), 400
-
-    audio_file = request.files['audio_data']
-
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as temp_audio_file:
-        audio_file.save(temp_audio_file.name)
-        temp_audio_file_path = temp_audio_file.name
-
-    try:
-        transcribed_text = transcribe_audio(temp_audio_file_path)
-        extracted_data = text_to_events(transcribed_text)
-        extracted_data_json = json.loads(extracted_data) if extracted_data else {}
-        return jsonify({'text': transcribed_text, 'extracted_data': extracted_data_json})
-    except Exception as e:
-        print(f"Error during transcription: {e}")
-        return jsonify({'error': str(e)}), 500
-    finally:
-        os.remove(temp_audio_file_path)
 
 @bp.route('/enhance-image', methods=['POST'])
 def enhance_image_route():
