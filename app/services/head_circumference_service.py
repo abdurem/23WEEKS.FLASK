@@ -23,11 +23,19 @@ def generate_mask_and_circumference(model, image_tensor):
         # Convert tensor to NumPy array
         mask_image = mask_image.squeeze().cpu().numpy()  # Remove batch and channel dimensions
 
-        # Calculate circumference from mask
-        circumference = calculate_circumference_from_mask(mask_image)
+        # Convert mask to 8-bit format
+        mask_image = (mask_image * 255).astype(np.uint8)  # Convert mask to 8-bit image
+
+        # Apply edge detection
+        edge_img = mcc_edge(mask_image)
+
+        # Fit an ellipse to the edge-detected image
+        xc, yc, theta, a, b = ellip_fit(edge_img)
+        
+        # Calculate circumference from ellipse parameters
+        circumference = 2 * np.pi * np.sqrt((a**2 + b**2) / 2)
         
         # Convert mask to image bytes
-        mask_image = (mask_image * 255).astype(np.uint8)  # Convert mask to 8-bit image
         mask_pil = Image.fromarray(mask_image)
         buffer = BytesIO()
         mask_pil.save(buffer, format="PNG")
@@ -41,13 +49,15 @@ def generate_mask_and_circumference(model, image_tensor):
     except Exception as e:
         print(f"Error generating mask and circumference: {str(e)}")
         raise
+
+
 # Load the model
 def load_model():
     try:
         print("Loading model...")
         model_path = 'app/models/HeadCircumferenceModel.pth'
         
-        model = CSM()  # Replace CSM() with your model's class name
+        model = CSM()  
         state_dict = torch.load(model_path, map_location=torch.device('cpu'))
         model.load_state_dict(state_dict)
         model.eval()
@@ -81,11 +91,6 @@ def preprocess_image(image_bytes):
         traceback.print_exc()
         return None
 
-
-
-import numpy as np
-import cv2
-from sklearn.metrics import confusion_matrix
 
 def calculate_circumference_from_mask(mask_image):
     """
@@ -160,3 +165,58 @@ def calculate_circumference(image_bytes):
         print(f"Error during processing: {str(e)}")
         traceback.print_exc()
         return None, None
+
+
+def mcc_edge(mask_image):
+    """
+    Applies edge detection using the Canny method.
+
+    Args:
+        mask_image (np.ndarray): The mask image as a numpy array.
+
+    Returns:
+        np.ndarray: The edge-detected image.
+    """
+    if not isinstance(mask_image, np.ndarray):
+        raise TypeError("Expected mask_image to be a numpy array")
+
+    # Ensure the mask image is in uint8 format
+    if mask_image.dtype != np.uint8:
+        mask_image = (mask_image * 255).astype(np.uint8)
+
+    # Apply Canny edge detection
+    edges = cv2.Canny(mask_image, 100, 200)
+    return edges
+
+def ellip_fit(edge_image):
+    """
+    Fits an ellipse to the edge-detected image.
+
+    Args:
+        edge_image (np.ndarray): The edge-detected image.
+
+    Returns:
+        tuple: The ellipse parameters (xc, yc, theta, a, b)
+    """
+    if not isinstance(edge_image, np.ndarray):
+        raise TypeError("Expected edge_image to be a numpy array")
+
+    # Find contours
+    contours, _ = cv2.findContours(edge_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    if not contours:
+        raise ValueError("No contours found in edge image")
+
+    # Assume the largest contour is the object of interest
+    largest_contour = max(contours, key=cv2.contourArea)
+
+    # Fit an ellipse to the largest contour
+    if len(largest_contour) < 5:
+        raise ValueError("Not enough points to fit an ellipse")
+
+    ellipse = cv2.fitEllipse(largest_contour)
+    xc, yc = ellipse[0]  # Center of the ellipse
+    (a, b) = ellipse[1]  # Axes lengths
+    theta = ellipse[2]  # Rotation angle
+
+    return xc, yc, theta, a, b
