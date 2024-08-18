@@ -1,9 +1,12 @@
+import os
 from flask import Blueprint, request, jsonify
+from flask import current_app as app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from app.models.user import User
 from app import db
-from app.schemas.user_schema import user_schema
+from app.schemas.user_schema import user_schema, user_update_schema
 from marshmallow import ValidationError
+from werkzeug.utils import secure_filename
 
 bp = Blueprint('auth', __name__)
 
@@ -46,3 +49,41 @@ def get_user():
     current_user_id = get_jwt_identity()
     user = User.query.get(current_user_id)
     return jsonify(user_schema.dump(user)), 200
+
+
+@bp.route('/update-account', methods=['POST'])
+@jwt_required()
+def update_account():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    try:
+        data = user_update_schema.load(request.form)
+    except ValidationError as err:
+        return jsonify(err.messages), 400
+
+    if 'full_name' in data:
+        user.full_name = data['full_name']
+    if 'email' in data:
+        user.email = data['email'].lower()
+
+    if 'avatar' in request.form and request.form['avatar'] == "":
+        user.avatar = None
+    elif 'avatar' in request.files:
+        avatar_file = request.files['avatar']
+        if avatar_file and allowed_file(avatar_file.filename):
+            filename = secure_filename(f"avatar_{user.id}_{avatar_file.filename}")
+            avatar_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            avatar_file.save(avatar_path)
+            user.avatar = filename
+
+    db.session.commit()
+
+    return jsonify(user_schema.dump(user)), 200
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}
