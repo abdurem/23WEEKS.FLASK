@@ -50,15 +50,15 @@ def enhance_image_route():
 def calculate_circumference_route():
     try:
         if 'image' not in request.files:
-            raise ValueError('No image file part')
+            return jsonify({"error": "No image file part"}), 400
 
         file = request.files['image']
         if file.filename == '':
-            raise ValueError('No selected file')
+            return jsonify({"error": "No selected file"}), 400
 
         image_bytes = file.read()
         if not image_bytes:
-            raise ValueError('No image data provided.')
+            return jsonify({"error": "No image data provided"}), 400
 
         # Load model and generate mask
         model = load_model()  # Ensure load_model() is implemented correctly
@@ -80,6 +80,7 @@ def calculate_circumference_route():
         print(f"Error during processing: {str(e)}")
         traceback.print_exc()
         return jsonify({"error": "Internal server error"}), 500
+
     
 @bp.route('/classify-ultrasound', methods=['POST'])
 def classify():
