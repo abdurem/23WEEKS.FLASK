@@ -1,12 +1,26 @@
 from flask import Blueprint, jsonify, request, send_file, url_for
 import os
+import json 
 from app.services.ultrasound_classification_service import classify_image
 from app.services.report_generation_service import create_report
 from app.services.chatbot_service import get_chatbot_response
 from app.services.image_enhancement_service import enhance_image 
 from app.services.head_circumference_service import *
-
+from app.services.Smart_reminders_service import text_to_events
+from app.services.story_generation_service import *
 bp = Blueprint('api', __name__)
+
+@bp.route('/process_text', methods=['POST'])
+def process_text():
+    data = request.json
+    transcription = data.get('transcription', '')
+    
+    if not transcription:
+        return jsonify({'error': 'No transcription provided'}), 400
+    
+    result = text_to_events(transcription)
+    
+    return jsonify(json.loads(result))
 
 @bp.route('/upload', methods=['POST'])
 def upload_file():
@@ -132,3 +146,35 @@ def chatbot():
 @bp.route('/static/reports/<path:filename>')
 def serve_report(filename):
     return send_file(os.path.join('static', 'reports', filename), as_attachment=True)
+
+@bp.route('/generate-story', methods=['POST'])
+def generate_story_route():
+    data = request.get_json()
+    topic = data.get('topic', 'space adventures')
+    chapters = int(data.get('chapters', 2))
+    language = data.get('language', 'en')
+
+    try:
+        story, images = Story_Generation(topic, chapters, language)
+        pdf_path = create_pdf(story, images)
+
+        if pdf_path:
+            pdf_url = f"/pdfs/{os.path.basename(pdf_path)}"
+            return jsonify({"story": story, "images": images, "pdf_url": pdf_url})
+        else:
+            return jsonify({"error": "PDF generation failed"}), 500
+    except Exception as e:
+        print(f"Error during story generation: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/pdfs/<filename>')
+def get_pdf(filename):
+    pdf_directory = os.path.join(os.path.dirname(__file__), 'pdfs')
+    try:
+        return send_from_directory(pdf_directory, filename)
+    except FileNotFoundError:
+        return jsonify({"error": "File not found"}), 404
+
+@bp.route('/images/<filename>')
+def get_image(filename):
+    return send_from_directory('images', filename)

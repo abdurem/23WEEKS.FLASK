@@ -17,6 +17,7 @@ def whisper():
 
 @bp.route('/transcribe', methods=['POST'])
 def transcribe():
+    print (os.environ.get("OPENAI_API_KEY"))
     if 'audio' not in request.files:
         return jsonify({"error": "No audio file provided"}), 400
 
