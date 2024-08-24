@@ -1,21 +1,21 @@
 import os
 import onnxruntime as ort
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageFilter
 from io import BytesIO
 
-# Define the path to the local ONNX model file
-model_file = 'app/models/ImageEnhancementModel.onnx'
+model_file = 'app/models/autoencoder_model.onnx'  # Update with your actual model path
 
-# Load the ONNX model
 def load_enhancement_model():
     if not os.path.exists(model_file):
         raise FileNotFoundError(f"The model file {model_file} does not exist.")
     
     session = ort.InferenceSession(model_file)
+    # Print the shape of the model's input tensor for debugging
+    input_shape = session.get_inputs()[0].shape
+    print(f"Model input shape: {input_shape}")
     return session
 
-# Image enhancement function
 def enhance_image(image_bytes):
     try:
         session = load_enhancement_model()
@@ -23,7 +23,12 @@ def enhance_image(image_bytes):
 
         # Load and preprocess the image
         image = Image.open(BytesIO(image_bytes)).convert('RGB')
-        image = image.resize((224, 224))  # Resize to match model input size
+        original_size = image.size
+        
+        # Optionally apply denoising
+        image = image.filter(ImageFilter.MedianFilter(size=3))
+        
+        image = image.resize((64, 64))  # Resize to match model input size (e.g., 64x64)
         grayscale_image = ImageOps.grayscale(image)
 
         # Convert images to arrays
@@ -37,6 +42,7 @@ def enhance_image(image_bytes):
         
         # Make predictions
         predictions = session.run(None, inputs)
+
         predicted_image_array = predictions[0][0]  # Get the first image in the batch
         
         # Check the shape of the predicted image array
@@ -45,8 +51,13 @@ def enhance_image(image_bytes):
         
         predicted_image_array = np.clip(predicted_image_array.squeeze() * 255.0, 0, 255).astype(np.uint8)  # Denormalize the image
 
-        # Return the enhanced image as bytes
+        # Resize the output image back to the original size
         enhanced_image = Image.fromarray(predicted_image_array.squeeze())
+        
+        # Optionally apply upscaling
+        enhanced_image = enhanced_image.resize(original_size, Image.Resampling.BICUBIC)
+        
+        # Save the enhanced image to bytes
         enhanced_image_bytes = BytesIO()
         enhanced_image.save(enhanced_image_bytes, format='PNG')
         enhanced_image_bytes.seek(0)
@@ -55,4 +66,4 @@ def enhance_image(image_bytes):
 
     except Exception as e:
         print(f"Error in enhance_image: {str(e)}")
-        return None
+        raise e
