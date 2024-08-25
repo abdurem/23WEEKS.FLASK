@@ -81,7 +81,6 @@ opencv-python-headless==4.10.0.84
 orjson==3.10.7
 packaging==24.1
 pandas==2.2.2
-pathlib==1.0.1
 pillow==10.4.0
 proto-plus==1.24.0
 protobuf==4.25.4
@@ -131,4 +130,5 @@ uritemplate==4.1.1
 urllib3==2.2.2
 Werkzeug==3.0.4
 yarl==1.9.4
+importlib-metadata==4.13.0
 gunicorn
