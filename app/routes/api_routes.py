@@ -10,29 +10,29 @@ from app.services.image_enhancement_service import enhance_image
 from app.services.head_circumference_service import *
 from app.services.Smart_reminders_service import text_to_events
 # from app.services.story_generation_service import *
-# from app.services.healthtrack_service import *
+from app.services.healthtrack_service import *
 # from app.services.search_engine_service import *
 # from app.services.anomaly_detection_service import detect_image
 
 bp = Blueprint('api', __name__)
 
-# @bp.route('/health-tracking', methods=['POST'])
-# def predict():
-#     try:
-#         data = request.form
-#         age = float(data.get('age'))
-#         systolic_bp = float(data.get('systolic_bp'))
-#         diastolic_bp = float(data.get('diastolic_bp'))
-#         bs = float(data.get('bs'))
-#         bt = float(data.get('bt'))
-#         heart_rate = float(data.get('heart_rate'))
+@bp.route('/health-tracking', methods=['POST'])
+def predict():
+    try:
+        data = request.form
+        age = float(data.get('age'))
+        systolic_bp = float(data.get('systolic_bp'))
+        diastolic_bp = float(data.get('diastolic_bp'))
+        bs = float(data.get('bs'))
+        bt = float(data.get('bt'))
+        heart_rate = float(data.get('heart_rate'))
 
-#         features = np.array([[age, systolic_bp, diastolic_bp, bs, bt, heart_rate]])
-#         risk_level = predict_health_risk(features)
+        features = np.array([[age, systolic_bp, diastolic_bp, bs, bt, heart_rate]])
+        risk_level = predict_health_risk(features)
 
-#         return jsonify({"risk_level": risk_level}), 200
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
+        return jsonify({"risk_level": risk_level}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     
 
 @bp.route('/process_text', methods=['POST'])
