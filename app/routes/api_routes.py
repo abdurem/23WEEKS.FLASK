@@ -9,7 +9,7 @@ from app.services.chatbot_service import get_chatbot_response
 from app.services.image_enhancement_service import enhance_image 
 from app.services.head_circumference_service import *
 from app.services.Smart_reminders_service import text_to_events
-# from app.services.story_generation_service import *
+from app.services.story_generation_service import *
 from app.services.healthtrack_service import *
 # from app.services.search_engine_service import *
 from app.services.brain_structure_detection_service import detect_image
@@ -171,37 +171,37 @@ def chatbot():
 def serve_report(filename):
     return send_file(os.path.join('static', 'reports', filename), as_attachment=True)
 
-# @bp.route('/generate-story', methods=['POST'])
-# def generate_story_route():
-#     data = request.get_json()
-#     topic = data.get('topic', 'space adventures')
-#     chapters = int(data.get('chapters', 2))
-#     language = data.get('language', 'en')
+@bp.route('/generate-story', methods=['POST'])
+def generate_story_route():
+    data = request.get_json()
+    topic = data.get('topic', 'space adventures')
+    chapters = int(data.get('chapters', 2))
+    language = data.get('language', 'en')
 
-#     try:
-#         story, images = Story_Generation(topic, chapters, language)
-#         pdf_path = create_pdf(story, images)
+    try:
+        story, images = Story_Generation(topic, chapters, language)
+        pdf_path = create_pdf(story, images)
 
-#         if pdf_path:
-#             pdf_url = f"/pdfs/{os.path.basename(pdf_path)}"
-#             return jsonify({"story": story, "images": images, "pdf_url": pdf_url})
-#         else:
-#             return jsonify({"error": "PDF generation failed"}), 500
-#     except Exception as e:
-#         print(f"Error during story generation: {str(e)}")
-#         return jsonify({"error": str(e)}), 500
+        if pdf_path:
+            pdf_url = f"/pdfs/{os.path.basename(pdf_path)}"
+            return jsonify({"story": story, "images": images, "pdf_url": pdf_url})
+        else:
+            return jsonify({"error": "PDF generation failed"}), 500
+    except Exception as e:
+        print(f"Error during story generation: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
-# @bp.route('/pdfs/<filename>')
-# def get_pdf(filename):
-#     pdf_directory = os.path.join(os.path.dirname(__file__), 'pdfs')
-#     try:
-#         return send_from_directory(pdf_directory, filename)
-#     except FileNotFoundError:
-#         return jsonify({"error": "File not found"}), 404
+@bp.route('/pdfs/<filename>')
+def get_pdf(filename):
+    pdf_directory = os.path.join(os.path.dirname(__file__), 'pdfs')
+    try:
+        return send_from_directory(pdf_directory, filename)
+    except FileNotFoundError:
+        return jsonify({"error": "File not found"}), 404
 
-# @bp.route('/images/<filename>')
-# def get_image(filename):
-#     return send_from_directory('images', filename)
+@bp.route('/images/<filename>')
+def get_image(filename):
+    return send_from_directory('images', filename)
 
 
 # search_service = SearchService()
