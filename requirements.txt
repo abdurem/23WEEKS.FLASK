@@ -22,13 +22,13 @@ distro==1.9.0
 etelemetry==0.3.1
 exceptiongroup==1.2.2
 filelock==3.15.4
-fitz==0.0.1.dev2
 Flask==3.0.3
 Flask-Cors==4.0.1
 Flask-JWT-Extended==4.6.0
 Flask-Migrate==4.0.7
 Flask-SQLAlchemy==3.1.1
 flatbuffers==24.3.25
+fpdf==1.7.2
 frozenlist==1.4.1
 fsspec==2024.6.1
 google-ai-generativelanguage==0.6.6
@@ -39,6 +39,7 @@ google-auth-httplib2==0.2.0
 google-generativeai==0.7.2
 googleapis-common-protos==1.63.2
 greenlet==3.0.3
+groq==0.9.0
 grpcio==1.66.0
 grpcio-status==1.62.3
 h11==0.14.0
@@ -81,8 +82,8 @@ opencv-python-headless==4.10.0.84
 orjson==3.10.7
 packaging==24.1
 pandas==2.2.2
-pathlib==1.0.1
 pillow==10.4.0
+pipdeptree==2.23.1
 proto-plus==1.24.0
 protobuf==4.25.4
 prov==2.0.1
