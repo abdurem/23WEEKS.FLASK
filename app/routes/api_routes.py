@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, send_file, url_for
+from flask import Blueprint, jsonify, request, send_file, url_for, send_from_directory
 import os
 import json 
 from threading import Thread
@@ -11,7 +11,7 @@ from app.services.head_circumference_service import *
 from app.services.Smart_reminders_service import text_to_events
 from app.services.story_generation_service import *
 from app.services.healthtrack_service import *
-from app.services.search_engine_service import *
+# from app.services.search_engine_service import *
 from app.services.brain_structure_detection_service import detect_image
 
 bp = Blueprint('api', __name__)
@@ -204,39 +204,39 @@ def get_image(filename):
     return send_from_directory('images', filename)
 
 
-search_service = SearchService()
+# search_service = SearchService()
 
-def load_model_in_background():
-    print("Starting model loading in background...")
-    search_service.load_models()
-    print("Model loading complete.")
+# def load_model_in_background():
+#     print("Starting model loading in background...")
+#     search_service.load_models()
+#     print("Model loading complete.")
 
 # Start the model loading in a separate thread
-model_loading_thread = Thread(target=load_model_in_background)
-model_loading_thread.start()
+# model_loading_thread = Thread(target=load_model_in_background)
+# model_loading_thread.start()
 
-@bp.route('/search', methods=['POST'])
-def search():
-    if not search_service.model_loaded:
-        return jsonify({"error": "Models are still loading. Please try again later."}), 503
+# @bp.route('/search', methods=['POST'])
+# def search():
+#     if not search_service.model_loaded:
+#         return jsonify({"error": "Models are still loading. Please try again later."}), 503
 
-    query = request.json.get('query')
-    if not query:
-        return jsonify({"error": "No query provided"}), 400
+#     query = request.json.get('query')
+#     if not query:
+#         return jsonify({"error": "No query provided"}), 400
 
-    # Perform search
-    try:
-        results = search_service.semantic_search(query)
-        return jsonify(results), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#     # Perform search
+#     try:
+#         results = search_service.semantic_search(query)
+#         return jsonify(results), 200
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
-@bp.route('/status', methods=['GET'])
-def status():
-    if search_service.model_loaded:
-        return jsonify({"status": "Model loaded and ready for search."}), 200
-    else:
-        return jsonify({"status": "Model is still loading..."}), 202
+# @bp.route('/status', methods=['GET'])
+# def status():
+#     if search_service.model_loaded:
+#         return jsonify({"status": "Model loaded and ready for search."}), 200
+#     else:
+#         return jsonify({"status": "Model is still loading..."}), 202
     
 
 @bp.route('/detect-image', methods=['POST'])
