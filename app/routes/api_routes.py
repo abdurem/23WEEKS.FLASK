@@ -12,7 +12,7 @@ from app.services.Smart_reminders_service import text_to_events
 # from app.services.story_generation_service import *
 from app.services.healthtrack_service import *
 # from app.services.search_engine_service import *
-# from app.services.anomaly_detection_service import detect_image
+from app.services.brain_structure_detection_service import detect_image
 
 bp = Blueprint('api', __name__)
 
@@ -239,24 +239,24 @@ def serve_report(filename):
 #         return jsonify({"status": "Model is still loading..."}), 202
     
 
-# @bp.route('/detect-image', methods=['POST'])
-# def detect_image_route():
-#     if 'image' not in request.files:
-#         return jsonify({'error': 'No image file found'}), 400
+@bp.route('/detect-image', methods=['POST'])
+def detect_image_route():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file found'}), 400
 
-#     file = request.files['image']
-#     if file.filename == '':
-#         return jsonify({'error': 'No selected file'}), 400
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
 
-#     try:
-#         image_bytes = file.read()
-#         detected_image_bytes = detect_image(image_bytes)
-#         if detected_image_bytes is None:
-#             raise ValueError('Image detection failed')
+    try:
+        image_bytes = file.read()
+        detected_image_bytes = detect_image(image_bytes)
+        if detected_image_bytes is None:
+            raise ValueError('Image detection failed')
 
-#         detected_image_base64 = base64.b64encode(detected_image_bytes.getvalue()).decode('utf-8')
-#         return jsonify({'detectedImage': detected_image_base64})
+        detected_image_base64 = base64.b64encode(detected_image_bytes.getvalue()).decode('utf-8')
+        return jsonify({'detectedImage': detected_image_base64})
 
-#     except Exception as e:
-#         print(f"Error: {str(e)}")
-#         return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
