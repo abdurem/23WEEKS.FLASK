@@ -10,29 +10,29 @@ from app.services.image_enhancement_service import enhance_image
 from app.services.head_circumference_service import *
 from app.services.Smart_reminders_service import text_to_events
 # from app.services.story_generation_service import *
-from app.services.healthtrack_service import *
-from app.services.search_engine_service import *
-from app.services.anomaly_detection_service import detect_image
+# from app.services.healthtrack_service import *
+# from app.services.search_engine_service import *
+# from app.services.anomaly_detection_service import detect_image
 
 bp = Blueprint('api', __name__)
 
-@bp.route('/health-tracking', methods=['POST'])
-def predict():
-    try:
-        data = request.form
-        age = float(data.get('age'))
-        systolic_bp = float(data.get('systolic_bp'))
-        diastolic_bp = float(data.get('diastolic_bp'))
-        bs = float(data.get('bs'))
-        bt = float(data.get('bt'))
-        heart_rate = float(data.get('heart_rate'))
+# @bp.route('/health-tracking', methods=['POST'])
+# def predict():
+#     try:
+#         data = request.form
+#         age = float(data.get('age'))
+#         systolic_bp = float(data.get('systolic_bp'))
+#         diastolic_bp = float(data.get('diastolic_bp'))
+#         bs = float(data.get('bs'))
+#         bt = float(data.get('bt'))
+#         heart_rate = float(data.get('heart_rate'))
 
-        features = np.array([[age, systolic_bp, diastolic_bp, bs, bt, heart_rate]])
-        risk_level = predict_health_risk(features)
+#         features = np.array([[age, systolic_bp, diastolic_bp, bs, bt, heart_rate]])
+#         risk_level = predict_health_risk(features)
 
-        return jsonify({"risk_level": risk_level}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#         return jsonify({"risk_level": risk_level}), 200
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
     
 
 @bp.route('/process_text', methods=['POST'])
@@ -171,92 +171,92 @@ def chatbot():
 def serve_report(filename):
     return send_file(os.path.join('static', 'reports', filename), as_attachment=True)
 
-@bp.route('/generate-story', methods=['POST'])
-def generate_story_route():
-    data = request.get_json()
-    topic = data.get('topic', 'space adventures')
-    chapters = int(data.get('chapters', 2))
-    language = data.get('language', 'en')
+# @bp.route('/generate-story', methods=['POST'])
+# def generate_story_route():
+#     data = request.get_json()
+#     topic = data.get('topic', 'space adventures')
+#     chapters = int(data.get('chapters', 2))
+#     language = data.get('language', 'en')
 
-    try:
-        story, images = Story_Generation(topic, chapters, language)
-        pdf_path = create_pdf(story, images)
+#     try:
+#         story, images = Story_Generation(topic, chapters, language)
+#         pdf_path = create_pdf(story, images)
 
-        if pdf_path:
-            pdf_url = f"/pdfs/{os.path.basename(pdf_path)}"
-            return jsonify({"story": story, "images": images, "pdf_url": pdf_url})
-        else:
-            return jsonify({"error": "PDF generation failed"}), 500
-    except Exception as e:
-        print(f"Error during story generation: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+#         if pdf_path:
+#             pdf_url = f"/pdfs/{os.path.basename(pdf_path)}"
+#             return jsonify({"story": story, "images": images, "pdf_url": pdf_url})
+#         else:
+#             return jsonify({"error": "PDF generation failed"}), 500
+#     except Exception as e:
+#         print(f"Error during story generation: {str(e)}")
+#         return jsonify({"error": str(e)}), 500
 
-@bp.route('/pdfs/<filename>')
-def get_pdf(filename):
-    pdf_directory = os.path.join(os.path.dirname(__file__), 'pdfs')
-    try:
-        return send_from_directory(pdf_directory, filename)
-    except FileNotFoundError:
-        return jsonify({"error": "File not found"}), 404
+# @bp.route('/pdfs/<filename>')
+# def get_pdf(filename):
+#     pdf_directory = os.path.join(os.path.dirname(__file__), 'pdfs')
+#     try:
+#         return send_from_directory(pdf_directory, filename)
+#     except FileNotFoundError:
+#         return jsonify({"error": "File not found"}), 404
 
-@bp.route('/images/<filename>')
-def get_image(filename):
-    return send_from_directory('images', filename)
+# @bp.route('/images/<filename>')
+# def get_image(filename):
+#     return send_from_directory('images', filename)
 
 
-search_service = SearchService()
+# search_service = SearchService()
 
-def load_model_in_background():
-    print("Starting model loading in background...")
-    search_service.load_models()
-    print("Model loading complete.")
+# def load_model_in_background():
+#     print("Starting model loading in background...")
+#     search_service.load_models()
+#     print("Model loading complete.")
 
-# Start the model loading in a separate thread
-model_loading_thread = Thread(target=load_model_in_background)
-model_loading_thread.start()
+# # Start the model loading in a separate thread
+# model_loading_thread = Thread(target=load_model_in_background)
+# model_loading_thread.start()
 
-@bp.route('/search', methods=['POST'])
-def search():
-    if not search_service.model_loaded:
-        return jsonify({"error": "Models are still loading. Please try again later."}), 503
+# @bp.route('/search', methods=['POST'])
+# def search():
+#     if not search_service.model_loaded:
+#         return jsonify({"error": "Models are still loading. Please try again later."}), 503
 
-    query = request.json.get('query')
-    if not query:
-        return jsonify({"error": "No query provided"}), 400
+#     query = request.json.get('query')
+#     if not query:
+#         return jsonify({"error": "No query provided"}), 400
 
-    # Perform search
-    try:
-        results = search_service.semantic_search(query)
-        return jsonify(results), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#     # Perform search
+#     try:
+#         results = search_service.semantic_search(query)
+#         return jsonify(results), 200
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
-@bp.route('/status', methods=['GET'])
-def status():
-    if search_service.model_loaded:
-        return jsonify({"status": "Model loaded and ready for search."}), 200
-    else:
-        return jsonify({"status": "Model is still loading..."}), 202
+# @bp.route('/status', methods=['GET'])
+# def status():
+#     if search_service.model_loaded:
+#         return jsonify({"status": "Model loaded and ready for search."}), 200
+#     else:
+#         return jsonify({"status": "Model is still loading..."}), 202
     
 
-@bp.route('/detect-image', methods=['POST'])
-def detect_image_route():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image file found'}), 400
+# @bp.route('/detect-image', methods=['POST'])
+# def detect_image_route():
+#     if 'image' not in request.files:
+#         return jsonify({'error': 'No image file found'}), 400
 
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+#     file = request.files['image']
+#     if file.filename == '':
+#         return jsonify({'error': 'No selected file'}), 400
 
-    try:
-        image_bytes = file.read()
-        detected_image_bytes = detect_image(image_bytes)
-        if detected_image_bytes is None:
-            raise ValueError('Image detection failed')
+#     try:
+#         image_bytes = file.read()
+#         detected_image_bytes = detect_image(image_bytes)
+#         if detected_image_bytes is None:
+#             raise ValueError('Image detection failed')
 
-        detected_image_base64 = base64.b64encode(detected_image_bytes.getvalue()).decode('utf-8')
-        return jsonify({'detectedImage': detected_image_base64})
+#         detected_image_base64 = base64.b64encode(detected_image_bytes.getvalue()).decode('utf-8')
+#         return jsonify({'detectedImage': detected_image_base64})
 
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+#     except Exception as e:
+#         print(f"Error: {str(e)}")
+#         return jsonify({'error': str(e)}), 500

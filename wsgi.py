@@ -15,7 +15,6 @@ from app import create_app
 ## PRODUCTION ##
 
 from app import create_app
-import patch
 
 app = create_app()
 
