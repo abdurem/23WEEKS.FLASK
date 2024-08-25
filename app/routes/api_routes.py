@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify, request, send_file, url_for, send_from_directory
 import os
 import json 
-from threading import Thread
-import time
+# from threading import Thread
+# import time
 from app.services.ultrasound_classification_service import classify_image
 from app.services.report_generation_service import create_report
 from app.services.chatbot_service import get_chatbot_response
@@ -178,11 +178,11 @@ def generate_story_route():
 
     try:
         story, images = Story_Generation(topic, chapters, language)
-        pdf_path = create_pdf(story, images)
+        # pdf_path = create_pdf(story, images)
 
-        if pdf_path:
-            pdf_url = f"/pdfs/{os.path.basename(pdf_path)}"
-            return jsonify({"story": story, "images": images, "pdf_url": pdf_url})
+        if True:
+            # pdf_url = f"/pdfs/{os.path.basename(pdf_path)}"
+            return jsonify({"story": story, "images": images, "pdf_url": ''})
         else:
             return jsonify({"error": "PDF generation failed"}), 500
     except Exception as e:
