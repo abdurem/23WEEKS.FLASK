@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.10.14-slim
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -17,6 +17,7 @@ WORKDIR /app
 
 COPY . /app
 
+RUN pip install --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8000
