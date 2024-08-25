@@ -1,184 +1,184 @@
-import os
-from dotenv import load_dotenv
-from groq import Groq
-from fpdf import FPDF
-import requests
-import logging
-from PIL import Image
-from io import BytesIO
+# import os
+# from dotenv import load_dotenv
+# from groq import Groq
+# from fpdf import FPDF
+# import requests
+# import logging
+# from PIL import Image
+# from io import BytesIO
 
-# Load environment variables
-load_dotenv()
+# # Load environment variables
+# load_dotenv()
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
+# # Configure logging
+# logging.basicConfig(level=logging.DEBUG)
 
-# Initialize Groq client
-client = Groq(
-    api_key=os.environ.get("GROQ_API_KEY"),
-)
+# # Initialize Groq client
+# client = Groq(
+#     api_key=os.environ.get("GROQ_API_KEY"),
+# )
 
-def generate_image(prompt, chapter, theme='3d African kids with no text'):
-    api_url = "https://api.openai.com/v1/images/generations"
-    headers = {
-        "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
-        "Content-Type": "application/json",
-    }
+# def generate_image(prompt, chapter, theme='3d African kids with no text'):
+#     api_url = "https://api.openai.com/v1/images/generations"
+#     headers = {
+#         "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
+#         "Content-Type": "application/json",
+#     }
     
-    full_prompt = f"{theme} theme illustration: {prompt}"
+#     full_prompt = f"{theme} theme illustration: {prompt}"
     
-    data = {
-        "prompt": full_prompt,
-        "n": 1,  # Generate one image per chapter
-        "size": "1024x1024",  # Image size
-        "model": "dall-e-3"  # Specify DALL-E 3 model
-    }
+#     data = {
+#         "prompt": full_prompt,
+#         "n": 1,  # Generate one image per chapter
+#         "size": "1024x1024",  # Image size
+#         "model": "dall-e-3"  # Specify DALL-E 3 model
+#     }
 
-    try:
-        response = requests.post(api_url, headers=headers, json=data)
-        response.raise_for_status()
-        image_url = response.json()["data"][0]["url"]
+#     try:
+#         response = requests.post(api_url, headers=headers, json=data)
+#         response.raise_for_status()
+#         image_url = response.json()["data"][0]["url"]
         
-        # Ensure the images directory exists
-        image_dir = 'images'
-        if not os.path.exists(image_dir):
-            os.makedirs(image_dir)
+#         # Ensure the images directory exists
+#         image_dir = 'images'
+#         if not os.path.exists(image_dir):
+#             os.makedirs(image_dir)
 
-        # Download the image locally
-        image_filename = f"chapter_{chapter}.jpg"
-        image_path = os.path.join(image_dir, image_filename)
-        img_data = requests.get(image_url).content
-        with open(image_path, 'wb') as handler:
-            handler.write(img_data)
+#         # Download the image locally
+#         image_filename = f"chapter_{chapter}.jpg"
+#         image_path = os.path.join(image_dir, image_filename)
+#         img_data = requests.get(image_url).content
+#         with open(image_path, 'wb') as handler:
+#             handler.write(img_data)
 
-        # Print the image URL to the console
-        print(f"Image URL for Chapter {chapter}: {image_url}")
+#         # Print the image URL to the console
+#         print(f"Image URL for Chapter {chapter}: {image_url}")
         
-        # Return the DALL-E generated image URL
-        return image_url
+#         # Return the DALL-E generated image URL
+#         return image_url
     
-    except requests.exceptions.RequestException as e:
-        print(f"Failed to generate image for Chapter {chapter}: {e}")
-        return None
+#     except requests.exceptions.RequestException as e:
+#         print(f"Failed to generate image for Chapter {chapter}: {e}")
+#         return None
     
-def Story_Generation(topic, chapters=5, language='en'):
-    story = []
-    images = []
+# def Story_Generation(topic, chapters=5, language='en'):
+#     story = []
+#     images = []
 
-    for chapter in range(1, chapters + 1):
-        prompt = f"""
-        You only generates stories in {language} language.
-        You are a native story generator in {language} Write an original story in {language} language for kids in africa. 
-        Create a story in the {language} language with no english translation.
-        All the chapters should be fully written in {language} language.
-        This story have {chapter} chapters about {topic} and should be fully wrirten in {language} language.
-        Don't mention any religion in the story.
-        The story are for the kids under 5 years old.
-        Don't mention the word kids in Africa.
-        """
-        response = client.chat.completions.create(
-            messages=[{"role": "user", "content": prompt}],
-            model="llama3-8b-8192",
-            max_tokens=500,
-            temperature=0.7,
-            user=language
-        )
+#     for chapter in range(1, chapters + 1):
+#         prompt = f"""
+#         You only generates stories in {language} language.
+#         You are a native story generator in {language} Write an original story in {language} language for kids in africa. 
+#         Create a story in the {language} language with no english translation.
+#         All the chapters should be fully written in {language} language.
+#         This story have {chapter} chapters about {topic} and should be fully wrirten in {language} language.
+#         Don't mention any religion in the story.
+#         The story are for the kids under 5 years old.
+#         Don't mention the word kids in Africa.
+#         """
+#         response = client.chat.completions.create(
+#             messages=[{"role": "user", "content": prompt}],
+#             model="llama3-8b-8192",
+#             max_tokens=500,
+#             temperature=0.7,
+#             user=language
+#         )
 
-        chapter_content = response.choices[0].message.content
-        story.append(f"{chapter_content}\n\n")
+#         chapter_content = response.choices[0].message.content
+#         story.append(f"{chapter_content}\n\n")
 
-        # Generate image for each chapter using DALL-E 3 with an African theme
-        image_prompt = f"Illustration for Chapter {chapter}: {chapter_content}"
-        image_path = generate_image(image_prompt, chapter, theme='African kids with no text in it')
-        images.append(image_path if image_path else None)
+#         # Generate image for each chapter using DALL-E 3 with an African theme
+#         image_prompt = f"Illustration for Chapter {chapter}: {chapter_content}"
+#         image_path = generate_image(image_prompt, chapter, theme='African kids with no text in it')
+#         images.append(image_path if image_path else None)
 
-    return story, images  # Ensure only two values are returned
+#     return story, images  # Ensure only two values are returned
 
-def download_image(image_url, save_directory, chapter_number):
-    try:
-        response = requests.get(image_url, stream=True)
-        response.raise_for_status()  # Raise an error for bad status codes
+# def download_image(image_url, save_directory, chapter_number):
+#     try:
+#         response = requests.get(image_url, stream=True)
+#         response.raise_for_status()  # Raise an error for bad status codes
         
-        # Create image path
-        image_filename = f"chapter_{chapter_number}.jpg"
-        image_path = os.path.join(save_directory, image_filename)
+#         # Create image path
+#         image_filename = f"chapter_{chapter_number}.jpg"
+#         image_path = os.path.join(save_directory, image_filename)
 
-        # Open the image directly from the response
-        image = Image.open(BytesIO(response.content))
+#         # Open the image directly from the response
+#         image = Image.open(BytesIO(response.content))
         
-        # Convert and save the image as a JPEG
-        image = image.convert('RGB')
-        image.save(image_path, 'JPEG')
-        print(f"Image for Chapter {chapter_number} downloaded and saved at: {image_path}")
+#         # Convert and save the image as a JPEG
+#         image = image.convert('RGB')
+#         image.save(image_path, 'JPEG')
+#         print(f"Image for Chapter {chapter_number} downloaded and saved at: {image_path}")
         
-        return image_path
-    except Exception as e:
-        print(f"Failed to download image for Chapter {chapter_number}: {e}")
-        return None
+#         return image_path
+#     except Exception as e:
+#         print(f"Failed to download image for Chapter {chapter_number}: {e}")
+#         return None
 
-def create_pdf(story, images):
-    # Define the directory to save the PDF and images
-    base_directory = os.path.dirname(__file__)
-    pdf_directory = os.path.join(base_directory, 'pdfs')
-    image_directory = os.path.join(base_directory, 'images')
+# def create_pdf(story, images):
+#     # Define the directory to save the PDF and images
+#     base_directory = os.path.dirname(__file__)
+#     pdf_directory = os.path.join(base_directory, 'pdfs')
+#     image_directory = os.path.join(base_directory, 'images')
     
-    if not os.path.exists(pdf_directory):
-        os.makedirs(pdf_directory)
-    if not os.path.exists(image_directory):
-        os.makedirs(image_directory)
+#     if not os.path.exists(pdf_directory):
+#         os.makedirs(pdf_directory)
+#     if not os.path.exists(image_directory):
+#         os.makedirs(image_directory)
 
-    # Define the PDF filename and path
-    pdf_filename = "generated_story.pdf"
-    pdf_path = os.path.join(pdf_directory, pdf_filename)
+#     # Define the PDF filename and path
+#     pdf_filename = "generated_story.pdf"
+#     pdf_path = os.path.join(pdf_directory, pdf_filename)
 
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.set_font("Arial", size=12)
+#     pdf = FPDF()
+#     pdf.set_auto_page_break(auto=True, margin=15)
+#     pdf.set_font("Arial", size=12)
 
-    # Process each chapter and image
-    for i, (chapter_text, image_url) in enumerate(zip(story, images)):
-        pdf.add_page()
+#     # Process each chapter and image
+#     for i, (chapter_text, image_url) in enumerate(zip(story, images)):
+#         pdf.add_page()
 
-        # Add the chapter text
-        try:
-            pdf.multi_cell(0, 10, chapter_text.encode('latin-1', 'replace').decode('latin-1'))
-        except UnicodeEncodeError as e:
-            print(f"Encoding error in chapter {i+1}: {e}")
-            continue
+#         # Add the chapter text
+#         try:
+#             pdf.multi_cell(0, 10, chapter_text.encode('latin-1', 'replace').decode('latin-1'))
+#         except UnicodeEncodeError as e:
+#             print(f"Encoding error in chapter {i+1}: {e}")
+#             continue
 
-        pdf.ln(10)  # Add some space after the text
+#         pdf.ln(10)  # Add some space after the text
 
-        # Download and add the image to the PDF
-        if image_url:
-            print(f"Found image for Chapter {i+1} at: {image_url}")
-            image_path = download_image(image_url, image_directory, i+1)
+#         # Download and add the image to the PDF
+#         if image_url:
+#             print(f"Found image for Chapter {i+1} at: {image_url}")
+#             image_path = download_image(image_url, image_directory, i+1)
 
-            if image_path and os.path.exists(image_path):
-                try:
-                    # Add the image to the PDF
-                    pdf.image(image_path, x=10, w=180)  # Adjust width as needed
-                    pdf.ln(10)
-                    print(f"Image added to PDF for Chapter {i+1}")
-                except Exception as e:
-                    print(f"Failed to add image to PDF for Chapter {i+1}: {e}")
-            else:
-                print(f"Image path does not exist or download failed for Chapter {i+1}")
-        else:
-            print(f"No image URL provided for Chapter {i+1}")
+#             if image_path and os.path.exists(image_path):
+#                 try:
+#                     # Add the image to the PDF
+#                     pdf.image(image_path, x=10, w=180)  # Adjust width as needed
+#                     pdf.ln(10)
+#                     print(f"Image added to PDF for Chapter {i+1}")
+#                 except Exception as e:
+#                     print(f"Failed to add image to PDF for Chapter {i+1}: {e}")
+#             else:
+#                 print(f"Image path does not exist or download failed for Chapter {i+1}")
+#         else:
+#             print(f"No image URL provided for Chapter {i+1}")
 
-    # Save the PDF
-    try:
-        pdf.output(pdf_path)
-        print(f"PDF generated successfully and saved at {pdf_path}")
-        return pdf_path
-    except Exception as e:
-        print(f"Failed to generate PDF: {str(e)}")
-        return None
+#     # Save the PDF
+#     try:
+#         pdf.output(pdf_path)
+#         print(f"PDF generated successfully and saved at {pdf_path}")
+#         return pdf_path
+#     except Exception as e:
+#         print(f"Failed to generate PDF: {str(e)}")
+#         return None
 
 
-if __name__ == "__main__":
-    story, images = Story_Generation("space adventures", chapters=1, language='en')
-    pdf_path = create_pdf(story, images)
-    print(f"Generated story: {pdf_path}")
-    print(f"Generated PDF is saved at: {pdf_path}")
+# if __name__ == "__main__":
+#     story, images = Story_Generation("space adventures", chapters=1, language='en')
+#     pdf_path = create_pdf(story, images)
+#     print(f"Generated story: {pdf_path}")
+#     print(f"Generated PDF is saved at: {pdf_path}")
 
