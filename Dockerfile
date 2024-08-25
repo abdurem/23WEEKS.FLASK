@@ -16,7 +16,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY . /app
-COPY patch.py /usr/local/lib/python3.10/
 
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt

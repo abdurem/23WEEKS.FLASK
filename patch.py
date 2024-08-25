@@ -1,16 +1,22 @@
 import sys
-from importlib import abc
+from collections import abc
 
-def patch_pathlib():
-    try:
-        import pathlib
-    except ImportError:
-        return
-    
-    if hasattr(pathlib, 'Sequence'):
-        return
-    
-    import collections.abc
-    sys.modules['collections'].Sequence = collections.abc.Sequence
+# Patch the pathlib module
+import pathlib
+if not hasattr(pathlib, 'Sequence'):
+    setattr(pathlib, 'Sequence', abc.Sequence)
 
-patch_pathlib()
+# Patch the collections module
+import collections
+if not hasattr(collections, 'Sequence'):
+    setattr(collections, 'Sequence', abc.Sequence)
+
+# Patch zipfile module
+import zipfile
+if not hasattr(zipfile, 'Sequence'):
+    setattr(zipfile, 'Sequence', abc.Sequence)
+
+# Patch pkg_resources module
+import pkg_resources
+if not hasattr(pkg_resources, 'Sequence'):
+    setattr(pkg_resources, 'Sequence', abc.Sequence)
