@@ -130,5 +130,5 @@ uritemplate==4.1.1
 urllib3==2.2.2
 Werkzeug==3.0.4
 yarl==1.9.4
-importlib-metadata==4.13.0
 gunicorn==20.1.0
+setuptools==58.0.0
