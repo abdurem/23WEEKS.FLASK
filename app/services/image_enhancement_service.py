@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image, ImageOps, ImageFilter
 from io import BytesIO
 
-model_file = 'app/models/autoencoder_model.onnx'  # Update with your actual model path
+model_file = 'app/models/ImageEnhancement.onnx'  # Update with your actual model path
 
 def load_enhancement_model():
     if not os.path.exists(model_file):

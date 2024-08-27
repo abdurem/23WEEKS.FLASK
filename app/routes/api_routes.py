@@ -1,18 +1,17 @@
-from flask import Blueprint, jsonify, request, send_file, url_for, send_from_directory
+from flask import Blueprint, jsonify, request, send_file, url_for
 import os
-import json 
-# from threading import Thread
-# import time
+import json
+from threading import Thread
 from app.services.ultrasound_classification_service import classify_image
 from app.services.report_generation_service import create_report
 from app.services.chatbot_service import get_chatbot_response
-from app.services.image_enhancement_service import enhance_image 
+from app.services.image_enhancement_service import enhance_image
 from app.services.head_circumference_service import *
 from app.services.Smart_reminders_service import text_to_events
 from app.services.story_generation_service import *
-from app.services.healthtrack_service import *
-# from app.services.search_engine_service import *
-from app.services.brain_structure_detection_service import detect_image
+from app.services.healthtrack_service import predict_health_risk
+from app.services.anomaly_detection_service import detect_image
+from app.utils.error_handler import handle_error, handle_file_error, handle_no_file_selected_error, handle_bad_request
 
 bp = Blueprint('api', __name__)
 
@@ -32,8 +31,7 @@ def predict():
 
         return jsonify({"risk_level": risk_level}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
+        return handle_error(e)
 
 @bp.route('/process_text', methods=['POST'])
 def process_text():
@@ -41,7 +39,7 @@ def process_text():
     transcription = data.get('transcription', '')
     
     if not transcription:
-        return jsonify({'error': 'No transcription provided'}), 400
+        return handle_bad_request('No transcription provided')
     
     result = text_to_events(transcription)
     
@@ -50,55 +48,47 @@ def process_text():
 @bp.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
+        return handle_file_error('file')
 
     file = request.files['file']
     if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
+        return handle_no_file_selected_error('file')
 
     return jsonify({"message": "File uploaded successfully"}), 200
-
-@bp.route('/')
-def index():
-    return "Flask server is running"
 
 @bp.route('/enhance-image', methods=['POST'])
 def enhance_image_route():
     if 'image' not in request.files:
-        return jsonify({'error': 'No image file found'}), 400
+        return handle_file_error('image')
 
     file = request.files['image']
     if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+        return handle_no_file_selected_error('image')
 
     try:
         image_bytes = file.read()
         enhanced_image_bytes = enhance_image(image_bytes)
-        
-        # Convert the image bytes to a base64-encoded string
         enhanced_image_base64 = base64.b64encode(enhanced_image_bytes).decode('utf-8')
         return jsonify({'enhancedImage': enhanced_image_base64})
 
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-    
+        return handle_error(e)
+
 @bp.route('/calculate-circumference', methods=['POST'])
 def calculate_circumference_route():
     try:
         if 'image' not in request.files:
-            return jsonify({"error": "No image file part"}), 400
+            return handle_file_error('image')
 
         file = request.files['image']
         if file.filename == '':
-            return jsonify({"error": "No selected file"}), 400
+            return handle_no_file_selected_error('image')
 
         image_bytes = file.read()
         if not image_bytes:
-            return jsonify({"error": "No image data provided"}), 400
+            return handle_bad_request('No image data provided')
 
-        # Load model and generate mask
-        model = load_model()  # Ensure load_model() is implemented correctly
+        model = load_model()
         mask_image_bytes, circumference, pixel_value = generate_mask_and_circumference(
             model, preprocess_image(image_bytes)
         )
@@ -111,17 +101,15 @@ def calculate_circumference_route():
                 "maskImage": mask_base64
             })
         else:
-            return jsonify({"error": "Unable to calculate circumference"}), 500
+            return handle_bad_request("Unable to calculate circumference")
 
     except Exception as e:
-        print(f"Error during processing: {str(e)}")
-        traceback.print_exc()
-        return jsonify({"error": "Internal server error"}), 500
+        return handle_error(e)
 
 @bp.route('/classify-ultrasound', methods=['POST'])
 def classify():
     if 'image' not in request.files:
-        return jsonify({"error": "No image provided"}), 400
+        return handle_file_error('image')
     
     image_file = request.files['image']
     image_bytes = image_file.read()
@@ -130,31 +118,26 @@ def classify():
         response = classify_image(image_bytes)
         return jsonify(response), 200
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return handle_error(e)
 
 @bp.route('/generate-report', methods=['POST'])
 def api_generate_report():
     if 'image' not in request.files:
-        return jsonify({"error": "No image file provided"}), 400
+        return handle_file_error('image')
 
     image_file = request.files['image']
     
     try:
         image = Image.open(image_file)
         html_content, pdf_filename = create_report(image)
-
         pdf_url = url_for('static', filename=f'reports/{pdf_filename}', _external=True)
-
         return jsonify({
             "report": html_content,
             "pdfLink": pdf_url
         }), 200
     except Exception as e:
-        print(f"Error in api_generate_report: {str(e)}")
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
-    
+        return handle_error(e)
+
 @bp.route('/chatbot', methods=['POST'])
 def chatbot():
     message = request.json.get('message')
@@ -163,7 +146,7 @@ def chatbot():
         response = get_chatbot_response(message)
         return jsonify({"content": response}), 200
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return handle_error(e)
 
 @bp.route('/static/reports/<path:filename>')
 def serve_report(filename):
@@ -178,16 +161,15 @@ def generate_story_route():
 
     try:
         story, images = Story_Generation(topic, chapters, language)
-        # pdf_path = create_pdf(story, images)
+        pdf_path = create_pdf(story, images)
 
-        if True:
-            # pdf_url = f"/pdfs/{os.path.basename(pdf_path)}"
-            return jsonify({"story": story, "images": images, "pdf_url": ''})
+        if pdf_path:
+            pdf_url = f"/pdfs/{os.path.basename(pdf_path)}"
+            return jsonify({"story": story, "images": images, "pdf_url": pdf_url})
         else:
-            return jsonify({"error": "PDF generation failed"}), 500
+            return handle_bad_request("PDF generation failed")
     except Exception as e:
-        print(f"Error during story generation: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        return handle_error(e)
 
 @bp.route('/pdfs/<filename>')
 def get_pdf(filename):
@@ -195,12 +177,47 @@ def get_pdf(filename):
     try:
         return send_from_directory(pdf_directory, filename)
     except FileNotFoundError:
-        return jsonify({"error": "File not found"}), 404
+        return handle_bad_request("File not found")
 
 @bp.route('/images/<filename>')
 def get_image(filename):
     return send_from_directory('images', filename)
 
+
+
+@bp.route('/detect-image', methods=['POST'])
+def detect_image_route():
+    if 'image' not in request.files:
+        return handle_file_error('image')
+
+    file = request.files['image']
+    if file.filename == '':
+        return handle_no_file_selected_error('image')
+
+    try:
+        image_bytes = file.read()
+        detected_image_bytes = detect_image(image_bytes)
+        if detected_image_bytes is None:
+            raise ValueError('Image detection failed')
+
+        detected_image_base64 = base64.b64encode(detected_image_bytes.getvalue()).decode('utf-8')
+        return jsonify({'detectedImage': detected_image_base64})
+
+    except Exception as e:
+        return handle_error(e)
+
+@bp.route('/calculate-fetal-age', methods=['POST'])
+def get_fetal_age():
+    data = request.json
+    circumference_cm = data.get('circumference')
+    if circumference_cm is None:
+        return jsonify({'error': 'Circumference not provided'}), 400
+
+    try:
+        fetal_age = calculate_fetal_age(circumference_cm)
+        return jsonify({'fetal_age': fetal_age})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # search_service = SearchService()
 
@@ -235,24 +252,3 @@ def get_image(filename):
 #         return jsonify({"status": "Model is still loading..."}), 202
     
 
-@bp.route('/detect-image', methods=['POST'])
-def detect_image_route():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image file found'}), 400
-
-    file = request.files['image']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-
-    try:
-        image_bytes = file.read()
-        detected_image_bytes = detect_image(image_bytes)
-        if detected_image_bytes is None:
-            raise ValueError('Image detection failed')
-
-        detected_image_base64 = base64.b64encode(detected_image_bytes.getvalue()).decode('utf-8')
-        return jsonify({'detectedImage': detected_image_base64})
-
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({'error': str(e)}), 500

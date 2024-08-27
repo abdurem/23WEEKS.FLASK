@@ -220,3 +220,38 @@ def ellip_fit(edge_image):
     theta = ellipse[2]  # Rotation angle
 
     return xc, yc, theta, a, b
+
+
+def calculate_fetal_age(head_circumference_cm):
+    if head_circumference_cm < 8.00: return 'Fetus is less than 8 Menstrual Weeks'
+    if head_circumference_cm >= 8.00 and head_circumference_cm <= 9.00: return '13 Weeks'
+    if head_circumference_cm > 9.00 and head_circumference_cm <= 10.49: return '14 Weeks'
+    if head_circumference_cm > 10.50 and head_circumference_cm <= 12.49: return '15 Weeks'
+    if head_circumference_cm > 12.50 and head_circumference_cm <= 13.49: return '16 Weeks'
+    if head_circumference_cm > 13.50 and head_circumference_cm <= 14.99: return '17 Weeks'
+    if head_circumference_cm > 15.00 and head_circumference_cm <= 16.49: return '18 Weeks'
+    if head_circumference_cm > 16.50 and head_circumference_cm <= 17.49: return '19 Weeks'
+    if head_circumference_cm > 17.50 and head_circumference_cm <= 18.99: return '20 Weeks'
+    if head_circumference_cm > 19.00 and head_circumference_cm <= 19.99: return '21 Weeks'
+    if head_circumference_cm > 20.00 and head_circumference_cm <= 20.99: return '22 Weeks'
+    if head_circumference_cm > 21.00 and head_circumference_cm <= 22.49: return '23 Weeks'
+    if head_circumference_cm > 22.50 and head_circumference_cm <= 22.99: return '24 Weeks'
+    if head_circumference_cm >= 23.00 and head_circumference_cm <= 23.99: return '25 Weeks'
+    if head_circumference_cm > 24.00 and head_circumference_cm <= 24.79: return '26 Weeks'
+    if head_circumference_cm > 24.80 and head_circumference_cm <= 25.60: return '27 Weeks'
+    if head_circumference_cm > 25.61 and head_circumference_cm <= 26.75: return '28 Weeks'
+    if head_circumference_cm > 26.76 and head_circumference_cm <= 27.75: return '29 Weeks'
+    if head_circumference_cm > 27.76 and head_circumference_cm <= 28.85: return '30 Weeks'
+    if head_circumference_cm > 28.86 and head_circumference_cm <= 29.60: return '31 Weeks'
+    if head_circumference_cm > 29.61 and head_circumference_cm <= 30.40: return '32 Weeks'
+    if head_circumference_cm > 30.41 and head_circumference_cm <= 31.20: return '33 Weeks'
+    if head_circumference_cm > 31.21 and head_circumference_cm <= 31.80: return '34 Weeks'
+    if head_circumference_cm > 31.81 and head_circumference_cm <= 32.50: return '35 Weeks'
+    if head_circumference_cm > 32.51 and head_circumference_cm <= 33.00: return '36 Weeks'
+    if head_circumference_cm > 33.01 and head_circumference_cm <= 33.70: return '37 Weeks'
+    if head_circumference_cm > 33.71 and head_circumference_cm <= 34.20: return '38 Weeks'
+    if head_circumference_cm > 34.21 and head_circumference_cm <= 35.00: return '39 Weeks'
+    if head_circumference_cm > 35.00 and head_circumference_cm <= 36.00: return '40 Weeks'
+    return 'Abnormal'
+
+
