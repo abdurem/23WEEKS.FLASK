@@ -31,10 +31,17 @@ def generate_mask_and_circumference(model, image_tensor):
 
         # Fit an ellipse to the edge-detected image
         xc, yc, theta, a, b = ellip_fit(edge_img)
-        
+        print(f"Ellipse parameters: xc={xc}, yc={yc}, theta={theta}, a={a}, b={b}")
         # Calculate circumference from ellipse parameters
+        u=8
+        xc = (xc + 0.5) * u - 0.5
+        yc = (yc + 0.5) * u - 0.5
+        a = a * u
+        b = b * u
+        print(f"Ellipse parameters: xc={xc}, yc={yc}, theta={theta}, a={a}, b={b}")
+        #circumference = 2 * np.pi * b + 4 * (a - b)  
         circumference = 2 * np.pi * np.sqrt((a**2 + b**2) / 2)
-        
+        print(f"Calculated circumference: {circumference}")
         # Convert mask to image bytes
         mask_pil = Image.fromarray(mask_image)
         buffer = BytesIO()
@@ -43,7 +50,7 @@ def generate_mask_and_circumference(model, image_tensor):
 
         # Optional: Calculate pixel value or any other relevant value
         pixel_value = np.mean(mask_image)  # Example pixel value calculation
-
+        print (f"pixel value {pixel_value}")
         return mask_image_bytes, circumference, pixel_value
 
     except Exception as e:
@@ -55,7 +62,7 @@ def generate_mask_and_circumference(model, image_tensor):
 def load_model():
     try:
         print("Loading model...")
-        model_path = 'app/models/HeadCircumferenceModel.pth'
+        model_path = 'app/models/test_model.pth'
         
         model = CSM()  
         state_dict = torch.load(model_path, map_location=torch.device('cpu'))
@@ -78,7 +85,7 @@ def preprocess_image(image_bytes):
         if image is None:
             raise ValueError("Image decoding failed")
 
-        desired_size = (256, 256)
+        desired_size = (192, 128)
         resized_image = cv2.resize(image, desired_size)
         normalized_image = resized_image / 255.0
         processed_image = np.expand_dims(normalized_image, axis=0)  # Add channel dimension
@@ -216,8 +223,13 @@ def ellip_fit(edge_image):
 
     ellipse = cv2.fitEllipse(largest_contour)
     xc, yc = ellipse[0]  # Center of the ellipse
-    (a, b) = ellipse[1]  # Axes lengths
+    (a, b) = ellipse[1]  
     theta = ellipse[2]  # Rotation angle
+    if a < b:
+        t = b
+        b = a
+        a = t
+        theta = theta + 0.5 * np.pi
 
     return xc, yc, theta, a, b
 

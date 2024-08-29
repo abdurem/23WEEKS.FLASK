@@ -12,6 +12,7 @@ from app.services.story_generation_service import *
 from app.services.healthtrack_service import predict_health_risk
 from app.services.anomaly_detection_service import detect_image
 from app.utils.error_handler import handle_error, handle_file_error, handle_no_file_selected_error, handle_bad_request
+from app.services.name_generation_service import generate_name
 
 bp = Blueprint('api', __name__)
 
@@ -252,3 +253,20 @@ def get_fetal_age():
 #         return jsonify({"status": "Model is still loading..."}), 202
     
 
+@bp.route('/generate_name', methods=['POST'])
+def generate_name_route():
+    try:
+        data = request.json
+        gender = data.get('gender', '')
+        origin = data.get('origin', '')
+        category = data.get('category', '')
+        length = data.get('length', '')
+        letter = data.get('letter', '')
+
+        names = generate_name(gender, origin, category, length, letter)
+        # Log the response for debugging
+        print(f"Generated names info: {names}")
+
+        return jsonify({'names': names})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
