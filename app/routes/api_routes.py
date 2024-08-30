@@ -162,11 +162,11 @@ def generate_story_route():
 
     try:
         story, images = Story_Generation(topic, chapters, language)
-        pdf_path = create_pdf(story, images)
+        # pdf_path = create_pdf(story, images)
 
-        if pdf_path:
-            pdf_url = f"/pdfs/{os.path.basename(pdf_path)}"
-            return jsonify({"story": story, "images": images, "pdf_url": pdf_url})
+        if True:
+            # pdf_url = f"/pdfs/{os.path.basename(pdf_path)}"
+            return jsonify({"story": story, "images": images, "pdf_url": ''})
         else:
             return handle_bad_request("PDF generation failed")
     except Exception as e:
