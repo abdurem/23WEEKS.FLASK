@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request, send_file, url_for
 import os
 import json
+from bs4 import BeautifulSoup
 from threading import Thread
 from app.services.ultrasound_classification_service import classify_image
 from app.services.report_generation_service import create_report
@@ -13,9 +14,12 @@ from app.services.healthtrack_service import predict_health_risk
 from app.services.anomaly_detection_service import detect_image
 from app.utils.error_handler import handle_error, handle_file_error, handle_no_file_selected_error, handle_bad_request
 from app.services.name_generation_service import generate_name
+import omim
+from omim import util
+from omim.db import Manager, OMIM_DATA
 
 bp = Blueprint('api', __name__)
-
+CORS(bp)
 @bp.route('/health-tracking', methods=['POST'])
 def predict():
     try:
@@ -270,3 +274,61 @@ def generate_name_route():
         return jsonify({'names': names})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+def generate_sound_endpoint():
+    data = request.json
+    story_text = data.get('story', '')
+    language = data.get('language', 'en')
+
+    try:
+        # Attempt to generate audio content
+        audio_content = detect_language_and_speak(story_text, manual_language=language)
+        if audio_content:
+            # Stream the audio content directly
+            return send_file(audio_content, as_attachment=False, download_name='output.mp3', mimetype='audio/mpeg')
+        else:
+            print("Voice generation failed. No audio content returned.")
+            return jsonify({'error': "Voice generation failed."}), 400
+    except Exception as e:
+        print(f"Error generating sound: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+manager = Manager(dbfile=omim.DEFAULT_DB)
+
+def query_omim(disease):
+   try:
+        # Query the OMIM database
+        res = manager.query(OMIM_DATA, 'title', f'%{disease}%', fuzzy=True)
+        results = []
+
+        for item in res.all():
+            results.append({
+                'mim_number': item.mim_number,
+                'title': item.title,
+                'references': item.references,
+                'geneMap': item.geneMap,
+                'phenotypeMap': item.phenotypeMap,
+                'mim_type': item.mim_type,
+                'entrez_gene_id': item.entrez_gene_id,
+                'ensembl_gene_id': item.ensembl_gene_id,
+                'hgnc_gene_symbol': item.hgnc_gene_symbol,
+                'generated': item.generated
+            })
+        return results
+   except Exception as e:
+        print(f"Error querying OMIM: {e}")
+        return []
+   
+@bp.route('/search_omim', methods=['GET'])
+def search_omim():
+    disease = request.args.get('disease')
+    if not disease:
+        return jsonify({'error': 'No disease provided'}), 400
+
+    results = query_omim(disease)
+    if not results:
+        return jsonify({'error': 'No results found'}), 404
+
+    return jsonify({'results': results})
+
