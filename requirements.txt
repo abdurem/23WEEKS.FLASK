@@ -117,3 +117,4 @@ urllib3==2.2.2
 Werkzeug==3.0.4
 yarl==1.9.4
 pandas==2.2.2
+omim==1.0.4
