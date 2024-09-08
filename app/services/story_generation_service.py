@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 from groq import Groq
-from fpdf import FPDF
+# from fpdf import FPDF
 from gtts import gTTS
 import requests
 import logging
