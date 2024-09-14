@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 from groq import Groq
-# from fpdf import FPDF
+from fpdf import FPDF
 from gtts import gTTS
 import requests
 import logging
@@ -120,81 +120,82 @@ def download_image(image_url, save_directory, chapter_number):
         print(f"Failed to download image for Chapter {chapter_number}: {e}")
         return None
 
-# def create_pdf(story, images):
-#     # Define the directory to save the PDF and images
-#     base_directory = os.path.dirname(__file__)
-#     pdf_directory = os.path.join(base_directory, 'pdfs')
-#     image_directory = os.path.join(base_directory, 'images')
+def create_pdf(story, images):
+    # Define the directory to save the PDF and images
+    base_directory = os.path.dirname(__file__)
+    pdf_directory = os.path.join(base_directory, 'pdfs')
+    image_directory = os.path.join(base_directory, 'images')
     
-#     if not os.path.exists(pdf_directory):
-#         os.makedirs(pdf_directory)
-#     if not os.path.exists(image_directory):
-#         os.makedirs(image_directory)
+    if not os.path.exists(pdf_directory):
+        os.makedirs(pdf_directory)
+    if not os.path.exists(image_directory):
+        os.makedirs(image_directory)
 
-#     # Define the PDF filename and path
-#     pdf_filename = "generated_story.pdf"
-#     pdf_path = os.path.join(pdf_directory, pdf_filename)
+    # Define the PDF filename and path
+    pdf_filename = "generated_story.pdf"
+    pdf_path = os.path.join(pdf_directory, pdf_filename)
 
-#     pdf = FPDF()
-#     pdf.set_auto_page_break(auto=True, margin=15)
-#     pdf.set_font("Arial", size=12)
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_font("Arial", size=12)
 
-#     # Process each chapter and image
-#     for i, (chapter_text, image_url) in enumerate(zip(story, images)):
-#         pdf.add_page()
+    # Process each chapter and image
+    for i, (chapter_text, image_url) in enumerate(zip(story, images)):
+        pdf.add_page()
 
-#         # Add the chapter text
-#         try:
-#             pdf.multi_cell(0, 10, chapter_text.encode('latin-1', 'replace').decode('latin-1'))
-#         except UnicodeEncodeError as e:
-#             print(f"Encoding error in chapter {i+1}: {e}")
-#             continue
+        # Add the chapter text
+        try:
+            pdf.multi_cell(0, 10, chapter_text.encode('latin-1', 'replace').decode('latin-1'))
+        except UnicodeEncodeError as e:
+            print(f"Encoding error in chapter {i+1}: {e}")
+            continue
 
-#         pdf.ln(10)  # Add some space after the text
+        pdf.ln(10)  # Add some space after the text
 
-#         # Download and add the image to the PDF
-#         if image_url:
-#             print(f"Found image for Chapter {i+1} at: {image_url}")
-#             image_path = download_image(image_url, image_directory, i+1)
+        # Download and add the image to the PDF
+        if image_url:
+            print(f"Found image for Chapter {i+1} at: {image_url}")
+            image_path = download_image(image_url, image_directory, i+1)
 
-#             if image_path and os.path.exists(image_path):
-#                 try:
-#                     # Add the image to the PDF
-#                     pdf.image(image_path, x=10, w=180)  # Adjust width as needed
-#                     pdf.ln(10)
-#                     print(f"Image added to PDF for Chapter {i+1}")
-#                 except Exception as e:
-#                     print(f"Failed to add image to PDF for Chapter {i+1}: {e}")
-#             else:
-#                 print(f"Image path does not exist or download failed for Chapter {i+1}")
-#         else:
-#             print(f"No image URL provided for Chapter {i+1}")
+            if image_path and os.path.exists(image_path):
+                try:
+                    # Add the image to the PDF
+                    pdf.image(image_path, x=10, w=180)  # Adjust width as needed
+                    pdf.ln(10)
+                    print(f"Image added to PDF for Chapter {i+1}")
+                except Exception as e:
+                    print(f"Failed to add image to PDF for Chapter {i+1}: {e}")
+            else:
+                print(f"Image path does not exist or download failed for Chapter {i+1}")
+        else:
+            print(f"No image URL provided for Chapter {i+1}")
 
-#     # Save the PDF
-#     try:
-#         pdf.output(pdf_path)
-#         print(f"PDF generated successfully and saved at {pdf_path}")
-#         return pdf_path
-#     except Exception as e:
-#         print(f"Failed to generate PDF: {str(e)}")
-#         return None
+    # Save the PDF
+    try:
+        pdf.output(pdf_path)
+        print(f"PDF generated successfully and saved at {pdf_path}")
+        return pdf_path
+    except Exception as e:
+        print(f"Failed to generate PDF: {str(e)}")
+        return None
 
 def generate_voice_with_eleven_labs(text):
-   
-    api_url = "https://api.elevenlabs.io/v1/text-to-speech/cgSgspJ2msm6clMCkdW9" 
+    # Correct API endpoint for text-to-speech generation
+    api_url = "https://api.elevenlabs.io/v1/text-to-speech/cgSgspJ2msm6clMCkdW9"  # Adjust this if the endpoint is different
 
     headers = {
-        'xi-api-key': os.getenv("ELEVEN_LABS_API_KEY"),  
+        'xi-api-key': os.getenv("ELEVEN_LABS_API_KEY"),  # Use the correct header for API key
         'Content-Type': 'application/json'
     }
 
+    # Payload structure based on Eleven Labs API requirements
     data = {
         "text": text,
         "voice_settings": {
-            "voice_id": "cgSgspJ2msm6clMCkdW9",  
-            "model_id": "eleven_multilingual_v2",  
-            "stability": 0.75,  
-            "similarity_boost": 0.75 
+            "voice_id": "cgSgspJ2msm6clMCkdW9",  # Confirm this is a valid voice ID
+            "model_id": "eleven_multilingual_v2",  # Ensure this is the correct model ID
+            "stability": 0.75,  # Required parameter for voice settings
+            "similarity_boost": 0.75  # Required parameter for voice settings
         }
     }
 
@@ -252,4 +253,5 @@ def detect_language_and_speak(text, manual_language=None):
         else:
             print(f"Language {detected_language} is not supported or detected incorrectly.")
             return None
+
 

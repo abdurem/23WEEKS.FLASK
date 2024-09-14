@@ -1,15 +1,12 @@
 import os
-from openai import OpenAI
-from langchain_openai import ChatOpenAI
+from groq import Groq
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables import RunnablePassthrough, RunnableWithMessageHistory
 from langchain_core.messages import AIMessage, HumanMessage
 
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-
-llm = ChatOpenAI(temperature=0.7)
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", """You are Dr. Gyno, a friendly and empathetic prenatal care expert. Your role is to provide helpful and accurate information about pregnancy and prenatal care. Always maintain a warm and supportive tone. 
@@ -27,7 +24,7 @@ Respond to the user's last message, keeping in mind the entire conversation cont
     ("human", "{input}"),
 ])
 
-chain = prompt | llm | StrOutputParser()
+chain = prompt | StrOutputParser()
 
 message_history = ChatMessageHistory()
 
@@ -42,15 +39,29 @@ def get_chatbot_response(message):
     try:
         history = message_history.messages
 
-        response = chain_with_history.invoke(
-            {"input": message, "history": history},
-            config={"configurable": {"session_id": "default"}},
-        )
-        
+        # Create the prompt to send to Groq
+        full_prompt = {
+            "messages": [
+                {"role": "system", "content": "You are Dr. Gyno, a friendly and empathetic prenatal care expert."},
+                {"role": "user", "content": message},
+            ],
+            "model": "llama3-8b-8192",  # Adjust based on the Groq model you're using
+            "max_tokens": 500,
+            "temperature": 0.7
+        }
+
+        # Call Groq API to get the response
+        response = client.chat.completions.create(messages=full_prompt['messages'], model=full_prompt['model'])
+
+        # Extract response text from Groq API result
+        ai_response = response.choices[0].message.content
+
+        # Store messages in history
         message_history.add_user_message(message)
-        message_history.add_ai_message(response)
-        
-        return response.strip()
+        message_history.add_ai_message(ai_response)
+
+        return ai_response.strip()
+    
     except Exception as e:
         print(f"Error in getting chatbot response: {str(e)}")
         return "I'm sorry, I'm having trouble responding right now. Please try again later."
@@ -58,3 +69,4 @@ def get_chatbot_response(message):
 def clear_conversation_history():
     global message_history
     message_history = ChatMessageHistory()
+

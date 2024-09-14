@@ -17,6 +17,8 @@ from app.services.name_generation_service import generate_name
 import omim
 from omim import util
 from omim.db import Manager, OMIM_DATA
+from suno import SongsGen
+from dotenv import load_dotenv
 
 bp = Blueprint('api', __name__)
 CORS(bp)
@@ -275,6 +277,7 @@ def generate_name_route():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
+@bp.route('/generate_sound', methods=['POST'])
 def generate_sound_endpoint():
     data = request.json
     story_text = data.get('story', '')
@@ -292,7 +295,6 @@ def generate_sound_endpoint():
     except Exception as e:
         print(f"Error generating sound: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
 
 manager = Manager(dbfile=omim.DEFAULT_DB)
 
@@ -332,3 +334,85 @@ def search_omim():
 
     return jsonify({'results': results})
 
+
+load_dotenv()
+
+SUNO_COOKIE = os.getenv('SUNO_COOKIE')
+
+if not SUNO_COOKIE:
+    raise ValueError("SUNO_COOKIE environment variable not set.")
+
+song_generator = SongsGen(SUNO_COOKIE)
+
+output_dir = os.path.join(os.getcwd(), 'output')  # Ensure this is correct
+
+@bp.route('/generate-song', methods=['POST'])
+def generate_song_route():
+    data = request.get_json()
+    description = data.get('description', '')
+    is_custom = data.get('is_custom', False)
+    title = data.get('title', 'custom_song')
+    tags = data.get('tags', '')
+
+    # Check if the description is provided
+    if not description:
+        return handle_bad_request('No description provided')
+
+    try:
+        # Generate the song (this could generate multiple files)
+        print(f"Generating song with description: {description}, is_custom: {is_custom}, title: {title}, tags: {tags}")
+        song_generator.save_songs(description, output_dir, is_custom=is_custom, title=title, tags=tags)
+
+        # Find all .mp3 files generated in the output directory
+        generated_files = [f for f in os.listdir(output_dir) if f.endswith('.mp3')]
+        if not generated_files:
+            return handle_bad_request("Song generation failed or no MP3 files found.")
+
+        # Assuming you want to return the first generated file, we take the first .mp3 file
+        first_song_file = generated_files[0]
+        song_file_path = os.path.join(output_dir, first_song_file)
+
+        print(f"Checking song file at: {song_file_path}")
+
+        if not os.path.exists(song_file_path):
+            return handle_bad_request("Song generation failed or file not found.")
+
+        # Create a URL for the song using the dynamically found file name
+        song_url = url_for('api.download_song', filename=first_song_file, _external=True)
+
+        return jsonify({
+            "message": "Song generated successfully",
+            "description": description,
+            "title": title,
+            "song_url": song_url  # Return the correct song URL based on the generated file
+        }), 200
+
+    except Exception as e:
+        print(f"Error generating song: {str(e)}")
+        return handle_error(e)
+
+@bp.route('/download-song/<filename>', methods=['GET'])
+def download_song(filename):
+    song_path = os.path.join(output_dir, filename)
+    print(f"Attempting to serve file from: {song_path}")
+    if os.path.exists(song_path):
+        return send_from_directory(output_dir, filename, as_attachment=False)
+    else:
+        return handle_bad_request(f"File {filename} not found.")
+
+def handle_bad_request(message):
+    """Handles bad requests by returning a 400 status code and a message."""
+    response = {
+        "message": message,
+        "error": "Bad Request"
+    }
+    return jsonify(response), 400
+
+def handle_error(e):
+    """Handles errors by returning a 500 status code and an error message."""
+    print(f"Error: {str(e)}")
+    response = {
+        "message": "An error occurred while generating the song.",
+        "error": str(e)
+    }
+    return jsonify(response), 500
