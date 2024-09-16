@@ -261,21 +261,9 @@ def get_fetal_age():
 
 @bp.route('/generate_name', methods=['POST'])
 def generate_name_route():
-    try:
-        data = request.json
-        gender = data.get('gender', '')
-        origin = data.get('origin', '')
-        category = data.get('category', '')
-        length = data.get('length', '')
-        letter = data.get('letter', '')
-
-        names = generate_name(gender, origin, category, length, letter)
-        # Log the response for debugging
-        print(f"Generated names info: {names}")
-
-        return jsonify({'names': names})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    criteria = request.json
+    result = generate_name(criteria)
+    return jsonify(result)
     
 @bp.route('/generate_sound', methods=['POST'])
 def generate_sound_endpoint():

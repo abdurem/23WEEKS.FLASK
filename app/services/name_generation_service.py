@@ -1,55 +1,70 @@
-import pandas as pd
+from flask import Flask, request, jsonify
+from groq import Groq
+import os
 
-# Load the CSV file into a DataFrame
-df = pd.read_csv('app/models/names.csv')
 
-def generate_name(gender='', origin='', category='', length='', letter=''):
-    """
-    Filters names based on provided criteria.
+client = Groq(api_key=os.environ.get("GROQ_API_KEY")) 
 
-    Parameters:
-    - gender (str): The gender to filter by (comma-separated for multiple values).
-    - origin (str): The origin to filter by (comma-separated for multiple values).
-    - category (str): The category to filter by (comma-separated for multiple values).
-    - length (str): The length to filter by ('short', 'medium', or 'long').
-    - letter (str): The starting letter to filter by.
+MODEL = 'llama3-groq-70b-8192-tool-use-preview'
 
-    Returns:
-    - List of filtered names.
-    """
-    # Ensure all inputs are strings
-    if not all(isinstance(value, str) for value in [gender, origin, category, length, letter]):
-        raise ValueError("All input values should be of type str")
+def generate_name(criteria):
+    """Generate baby names based on the given criteria."""
+   
+    # Extract criteria from the dictionary
+    gender = criteria.get("gender", "")
+    origin = criteria.get("origin", "")
+    meaning = criteria.get("meaning", "")
+    name_length = criteria.get("name_length", "")
+    start_letter = criteria.get("start_letter", "")
+    count = criteria.get("count", 5) 
+   
+    print(gender)
+    print(origin)
+    print(meaning)
+    print(name_length)
+    print(start_letter)
 
-    query = df.copy()
-
-    if gender:
-        genders = gender.split(',')
-        query = query[query['Gender'].str.lower().isin([g.lower() for g in genders])]
-
-    if origin:
-        origins = origin.split(',')
-        query = query[query['Origin'].str.lower().isin([o.lower() for o in origins])]
-
-    if category:
-        categories = category.split(',')
-        query = query[query['Category'].str.lower().isin([c.lower() for c in categories])]
-
-    if length:
-        length_map = {
-            'short': query['Name'].str.len() <= 4,
-            'medium': (query['Name'].str.len() > 4) & (query['Name'].str.len() <= 7),
-            'long': query['Name'].str.len() > 7
+    # Build the user prompt for the Groq model based on criteria
+    user_prompt = (
+        f"Generate {count} {origin} baby names that are {gender}, "
+        f"start with the letter '{start_letter}', have a meaning related to '{meaning}', "
+        f"and have a name length of {name_length}."
+    )
+   
+    # Prepare the messages to send to the Groq API
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a helpful assistant that generates baby names based on the user's criteria such as gender, origin, starting letter, meaning, and name length."
+        },
+        {
+            "role": "user",
+            "content": user_prompt,
         }
-        query = query[length_map.get(length.lower(), slice(None))]
+    ]
+   
+    # Call the Groq API to generate names
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=messages,
+        max_tokens=150  # Adjust based on expected response size
+    )
+   
+    # Log the API response
+    print("API Response:", response)
+   
+    # Extract the content from the response
+    content = response.choices[0].message.content.strip()
 
-    # Filter by first letter
-        
-    if letter:
-        query = query[query['Name'].str.startswith(letter.upper())]
-
-    # Select relevant columns to return
-    result = query[['Name', 'Gender', 'Origin', 'Meaning']]
-
-    # Convert the DataFrame to a list of dictionaries
-    return result.to_dict(orient='records')
+    # Process the content to extract names and meanings
+    lines = content.split('\n')
+    names = []
+    for line in lines:
+        if line.strip():  # Check if the line is not empty
+            parts = line.split(' - ')
+            if len(parts) == 2:
+                name = parts[0].strip()
+                meaning = parts[1].strip()
+                names.append({"Name": name, "Meaning": meaning})
+   
+    return {"baby_names": names}
