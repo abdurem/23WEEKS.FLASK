@@ -12,7 +12,13 @@ MODEL_NAME = "whisper-large-v3"
 
 @bp.route('/')
 def index():
-    return jsonify({"message": "Welcome to the Flask Backend using Groq!"})
+    return jsonify({
+        "message": "🌟 Welcome to 23 Weeks!",
+        "status": "✅ Server is running smoothly.",
+        "info": "🤖 Explore our AI features for a healthy pregnancy!",
+        "api_version": "🔧 v1.0",
+        "contact": "📧 Reach us at 23weeks@gmail.com for inquiries."
+    })
 
 @bp.route('/whisper')
 def whisper():
