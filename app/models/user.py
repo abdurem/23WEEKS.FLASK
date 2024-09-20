@@ -1,5 +1,6 @@
 from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import date
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -10,6 +11,16 @@ class User(db.Model):
     type = db.Column(db.String(32))
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
+
+    pregnancy_info = db.relationship('PregnancyInfo', back_populates='user', uselist=False)
+
+    def get_current_pregnancy_week(self):
+        if self.pregnancy_info:
+            today = date.today()
+            days_pregnant = (today - self.pregnancy_info.pregnancy_start_date).days
+            weeks_pregnant = days_pregnant // 7 + 1
+            return min(weeks_pregnant, 40)
+        return None
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

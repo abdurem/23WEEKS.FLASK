@@ -10,6 +10,8 @@ class UserSchema(Schema):
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
     avatar = fields.Method("get_avatar_url", dump_only=True)
+    pregnancy_info = fields.Nested('PregnancyInfoSchema', dump_only=True)
+    current_pregnancy_week = fields.Int(dump_only=True)
 
     def get_avatar_url(self, obj):
         if obj.avatar:
@@ -22,5 +24,4 @@ class UserUpdateSchema(Schema):
     email = fields.Email()
 
 user_schema = UserSchema()
-users_schema = UserSchema(many=True)
 user_update_schema = UserUpdateSchema()
