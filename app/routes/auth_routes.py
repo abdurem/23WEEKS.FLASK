@@ -9,6 +9,8 @@ from app.schemas.pregnancy_info_schema import pregnancy_info_schema
 from marshmallow import ValidationError
 from werkzeug.utils import secure_filename
 from app.models.pregnancy_info import PregnancyInfo
+import dateutil.parser
+from datetime import datetime
 
 bp = Blueprint('auth', __name__)
 
@@ -43,14 +45,40 @@ def login():
     user = User.query.filter_by(email=email).first()
     if user and user.check_password(data['password']):
         access_token = create_access_token(identity=user.id)
+        
         user_data = {
             "id": user.id,
             "full_name": user.full_name,
             "email": user.email,
             "type": user.type,
-            "current_pregnancy_week": user.get_current_pregnancy_week() if user.type == 'user' else None
+            "avatar": user.avatar,
+            "created_at": user.created_at.isoformat(),
+            "updated_at": user.updated_at.isoformat()
         }
+        
+        if user.type == 'user':
+            pregnancy_info = PregnancyInfo.query.filter_by(user_id=user.id).first()
+            print(pregnancy_info)
+            if pregnancy_info:
+                gynecologist_data = None
+                if pregnancy_info.gynecologist:
+                    gynecologist_data = {
+                        "id": pregnancy_info.gynecologist.id,
+                        "full_name": pregnancy_info.gynecologist.full_name,
+                        "avatar": pregnancy_info.gynecologist.avatar
+                    }
+                
+                user_data['pregnancy_info'] = {
+                    "pregnancy_start_date": pregnancy_info.pregnancy_start_date.isoformat(),
+                    "gynecologist": gynecologist_data
+                }
+                user_data['current_pregnancy_week'] = pregnancy_info.get_current_week()
+            else:
+                user_data['pregnancy_info'] = None
+                user_data['current_pregnancy_week'] = None
+
         return jsonify(access_token=access_token, **user_data), 200
+
     return jsonify({"msg": "Bad email or password"}), 401
 
 @bp.route('/register/patient-info', methods=['POST'])
@@ -69,7 +97,8 @@ def register_patient_info():
 
     pregnancy_info = PregnancyInfo(
         user_id=user.id,
-        pregnancy_start_date=data['pregnancy_start_date']
+        pregnancy_start_date=data['pregnancy_start_date'],
+        gynecologist_id=data.get('gynecologist_id')
     )
 
     db.session.add(pregnancy_info)
@@ -77,6 +106,20 @@ def register_patient_info():
 
     user_data = user_schema.dump(user)
     user_data['current_pregnancy_week'] = user.get_current_pregnancy_week()
+
+    user_data['created_at'] = user.created_at.isoformat()
+    user_data['updated_at'] = user.updated_at.isoformat()
+
+    if pregnancy_info.gynecologist:
+        user_data['pregnancy_info'] = {
+            "pregnancy_start_date": pregnancy_info.pregnancy_start_date.isoformat(),
+            "gynecologist": {
+                "id": pregnancy_info.gynecologist.id,
+                "full_name": pregnancy_info.gynecologist.full_name,
+                "avatar": pregnancy_info.gynecologist.avatar
+            }
+        }
+
     return jsonify(user=user_data), 200
 
 @bp.route('/user', methods=['GET'])
@@ -119,6 +162,38 @@ def update_account():
     db.session.commit()
 
     return jsonify(user_schema.dump(user)), 200
+
+@bp.route('/update-pregnancy', methods=['POST'])
+@jwt_required()
+def update_pregnancy():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    if not user:
+        return jsonify({"msg": "User not found"}), 404
+
+    data = request.json
+
+    if not user.pregnancy_info:
+        pregnancy_info = PregnancyInfo(user_id=user.id)
+        db.session.add(pregnancy_info)
+    else:
+        pregnancy_info = user.pregnancy_info
+
+    if 'pregnancy_start_date' in data and data['pregnancy_start_date']:
+        try:
+            # Parse the ISO 8601 date string
+            parsed_date = dateutil.parser.isoparse(data['pregnancy_start_date'])
+            pregnancy_info.pregnancy_start_date = parsed_date.date()
+        except ValueError as e:
+            return jsonify({"msg": f"Invalid date format: {str(e)}"}), 400
+
+    if 'gynecologist_id' in data:
+        pregnancy_info.gynecologist_id = data['gynecologist_id'] if data['gynecologist_id'] else None
+
+    db.session.commit()
+
+    return jsonify(pregnancy_info_schema.dump(pregnancy_info)), 200
 
 @bp.route('/update-password', methods=['POST'])
 @jwt_required()

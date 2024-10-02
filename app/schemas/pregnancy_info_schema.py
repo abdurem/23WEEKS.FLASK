@@ -3,6 +3,7 @@ from datetime import datetime
 
 class PregnancyInfoSchema(Schema):
     pregnancy_start_date = fields.Date(required=True)
+    gynecologist_id = fields.Integer(allow_none=True)
 
     @post_load
     def parse_date(self, data, **kwargs):

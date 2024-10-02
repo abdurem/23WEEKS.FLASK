@@ -15,6 +15,7 @@ from app.services.anomaly_detection_service import detect_image
 from app.utils.error_handler import handle_error, handle_file_error, handle_no_file_selected_error, handle_bad_request
 from app.services.name_generation_service import generate_name
 import omim
+from app.models.user import User
 from omim import util
 from omim.db import Manager, OMIM_DATA
 from suno import SongsGen
@@ -22,6 +23,25 @@ from dotenv import load_dotenv
 
 bp = Blueprint('api', __name__)
 CORS(bp)
+
+@bp.route('/doctor_list', methods=['GET'])
+def doctor_list():
+    doctors = User.query.filter_by(type='doctor').all()
+    
+    doctor_list = []
+    for doctor in doctors:
+        doctor_info = {
+            'id': doctor.id,
+            'avatar': doctor.avatar,
+            'full_name': doctor.full_name,
+            'email': doctor.email,
+            'created_at': doctor.created_at,
+            'updated_at': doctor.updated_at
+        }
+        doctor_list.append(doctor_info)
+
+    return jsonify(doctor_list), 200
+
 @bp.route('/health-tracking', methods=['POST'])
 def predict():
     try:
