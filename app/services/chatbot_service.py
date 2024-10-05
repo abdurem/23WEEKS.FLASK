@@ -1,72 +1,83 @@
 import os
+import logging
 from groq import Groq
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema import StrOutputParser
 from langchain_community.chat_message_histories import ChatMessageHistory
-from langchain_core.runnables import RunnablePassthrough, RunnableWithMessageHistory
 from langchain_core.messages import AIMessage, HumanMessage
+from app import db
+from app.models.chat_message import ChatMessage
+from app.schemas.chat_message_schema import chat_messages_schema
+from datetime import timezone
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are Dr. Gyno, a friendly and empathetic prenatal care expert. Your role is to provide helpful and accurate information about pregnancy and prenatal care. Always maintain a warm and supportive tone. 
 
-Important guidelines:
-1. Remember details about the user.
-2. Don't assume information that hasn't been explicitly stated.
-3. If unsure about any information, ask for clarification politely.
-4. Always address the user by their name if you know it.
+def get_or_create_message_history(user_id):
+    if not user_id:
+        logger.warning("No user ID provided, using default")
+        user_id = "default"
+    
+    if user_id not in message_histories:
+        logger.debug(f"Creating new message history for user {user_id}")
+        message_histories[user_id] = ChatMessageHistory()
+    return message_histories[user_id]
 
-Current conversation context: {history}
-User's last message: {input}
-
-Respond to the user's last message, keeping in mind the entire conversation context."""),
-    ("human", "{input}"),
-])
-
-chain = prompt | StrOutputParser()
-
-message_history = ChatMessageHistory()
-
-chain_with_history = RunnableWithMessageHistory(
-    chain,
-    lambda session_id: message_history,
-    input_messages_key="input",
-    history_messages_key="history",
-)
-
-def get_chatbot_response(message):
+def get_chatbot_response(message, user_id):
     try:
-        history = message_history.messages
-
-        # Create the prompt to send to Groq
+        logger.debug(f"Received message from user {user_id}: {message}")
+        
+        # Get existing chat history
+        history = get_conversation_history(user_id)
+        
         full_prompt = {
             "messages": [
                 {"role": "system", "content": "You are Dr. Gyno, a friendly and empathetic prenatal care expert."},
+                *[{"role": "user" if not msg['is_bot'] else "assistant", "content": msg['content']} for msg in history],
                 {"role": "user", "content": message},
             ],
-            "model": "llama3-8b-8192",  # Adjust based on the Groq model you're using
+            "model": "llama3-8b-8192",
             "max_tokens": 500,
             "temperature": 0.7
         }
 
-        # Call Groq API to get the response
         response = client.chat.completions.create(messages=full_prompt['messages'], model=full_prompt['model'])
 
-        # Extract response text from Groq API result
         ai_response = response.choices[0].message.content
 
-        # Store messages in history
-        message_history.add_user_message(message)
-        message_history.add_ai_message(ai_response)
+        # Save user message
+        user_message = ChatMessage(user_id=user_id, content=message, is_bot=False)
+        db.session.add(user_message)
+        
+        # Save bot response
+        bot_message = ChatMessage(user_id=user_id, content=ai_response, is_bot=True)
+        db.session.add(bot_message)
+        
+        db.session.commit()
+
+        logger.debug(f"Added new messages to history for user {user_id}")
 
         return ai_response.strip()
     
     except Exception as e:
-        print(f"Error in getting chatbot response: {str(e)}")
+        logger.error(f"Error in getting chatbot response: {str(e)}")
         return "I'm sorry, I'm having trouble responding right now. Please try again later."
+    
+def clear_conversation_history(user_id):
+    logger.debug(f"Clearing conversation history for user {user_id}")
+    ChatMessage.query.filter_by(user_id=user_id).delete()
+    db.session.commit()
+    logger.debug(f"Cleared conversation history for user {user_id}")
 
-def clear_conversation_history():
-    global message_history
-    message_history = ChatMessageHistory()
-
+def get_conversation_history(user_id):
+    logger.debug(f"Fetching conversation history for user {user_id}")
+    messages = ChatMessage.query.filter_by(user_id=user_id).order_by(ChatMessage.timestamp).all()
+    history = [{
+        'id': msg.id,
+        'content': msg.content,
+        'is_bot': msg.is_bot,
+        'timestamp': msg.timestamp.replace(tzinfo=timezone.utc).isoformat()
+    } for msg in messages]
+    logger.debug(f"Returning history: {history}")
+    return history

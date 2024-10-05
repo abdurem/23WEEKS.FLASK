@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, url_for
 from flask import current_app as app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from app.models.user import User
@@ -14,6 +14,11 @@ from datetime import datetime
 
 bp = Blueprint('auth', __name__)
 
+@bp.route('/validate-token', methods=['GET'])
+@jwt_required()
+def validate_token():
+    return jsonify({"isValid": True}), 200
+
 @bp.route('/register', methods=['POST'])
 def register():
     try:
@@ -21,7 +26,7 @@ def register():
     except ValidationError as err:
         return jsonify(err.messages), 400
 
-    full_name = data['full_name'].lower()
+    full_name = ' '.join(word.capitalize() for word in data['full_name'].split())
     email = data['email'].lower()
 
     if User.query.filter_by(email=email).first():
@@ -34,6 +39,10 @@ def register():
     
     access_token = create_access_token(identity=user.id)
     user_data = user_schema.dump(user)
+
+    if user.avatar:
+        user_data['avatar'] = url_for('static', filename=f'uploads/{user.avatar}', _external=True)
+
     return jsonify(access_token=access_token, user=user_data), 201
 
 @bp.route('/login', methods=['POST'])
@@ -51,21 +60,24 @@ def login():
             "full_name": user.full_name,
             "email": user.email,
             "type": user.type,
-            "avatar": user.avatar,
             "created_at": user.created_at.isoformat(),
             "updated_at": user.updated_at.isoformat()
         }
+
+        if user.avatar:
+            user_data["avatar"] = url_for('static', filename=f'uploads/{user.avatar}', _external=True)
+        else:
+            user_data["avatar"] = None
         
         if user.type == 'user':
             pregnancy_info = PregnancyInfo.query.filter_by(user_id=user.id).first()
-            print(pregnancy_info)
             if pregnancy_info:
                 gynecologist_data = None
                 if pregnancy_info.gynecologist:
                     gynecologist_data = {
                         "id": pregnancy_info.gynecologist.id,
                         "full_name": pregnancy_info.gynecologist.full_name,
-                        "avatar": pregnancy_info.gynecologist.avatar
+                        "avatar": url_for('static', filename=f'uploads/{pregnancy_info.gynecologist.avatar}', _external=True) if pregnancy_info.gynecologist.avatar else None
                     }
                 
                 user_data['pregnancy_info'] = {
@@ -110,14 +122,24 @@ def register_patient_info():
     user_data['created_at'] = user.created_at.isoformat()
     user_data['updated_at'] = user.updated_at.isoformat()
 
+    if user.avatar:
+        user_data["avatar"] = url_for('static', filename=f'uploads/{user.avatar}', _external=True)
+    else:
+        user_data["avatar"] = None
+
     if pregnancy_info.gynecologist:
         user_data['pregnancy_info'] = {
             "pregnancy_start_date": pregnancy_info.pregnancy_start_date.isoformat(),
             "gynecologist": {
                 "id": pregnancy_info.gynecologist.id,
                 "full_name": pregnancy_info.gynecologist.full_name,
-                "avatar": pregnancy_info.gynecologist.avatar
+                "avatar": url_for('static', filename=f'uploads/{pregnancy_info.gynecologist.avatar}', _external=True) if pregnancy_info.gynecologist.avatar else None
             }
+        }
+    else:
+        user_data['pregnancy_info'] = {
+            "pregnancy_start_date": pregnancy_info.pregnancy_start_date.isoformat(),
+            "gynecologist": None
         }
 
     return jsonify(user=user_data), 200
@@ -182,7 +204,6 @@ def update_pregnancy():
 
     if 'pregnancy_start_date' in data and data['pregnancy_start_date']:
         try:
-            # Parse the ISO 8601 date string
             parsed_date = dateutil.parser.isoparse(data['pregnancy_start_date'])
             pregnancy_info.pregnancy_start_date = parsed_date.date()
         except ValueError as e:

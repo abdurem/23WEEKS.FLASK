@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from threading import Thread
 from app.services.ultrasound_classification_service import classify_image
 from app.services.report_generation_service import create_report
-from app.services.chatbot_service import get_chatbot_response
+from app.services.chatbot_service import get_chatbot_response, clear_conversation_history, get_conversation_history
 from app.services.image_enhancement_service import enhance_image
 from app.services.head_circumference_service import *
 from app.services.Smart_reminders_service import text_to_events
@@ -14,12 +14,14 @@ from app.services.healthtrack_service import predict_health_risk
 from app.services.anomaly_detection_service import detect_image
 from app.utils.error_handler import handle_error, handle_file_error, handle_no_file_selected_error, handle_bad_request
 from app.services.name_generation_service import generate_name
+from app.services.gynecologist_chat_service import *
 import omim
 from app.models.user import User
 from omim import util
 from omim.db import Manager, OMIM_DATA
 from suno import SongsGen
 from dotenv import load_dotenv
+from app.models.pregnancy_info import PregnancyInfo
 
 bp = Blueprint('api', __name__)
 CORS(bp)
@@ -165,15 +167,146 @@ def api_generate_report():
     except Exception as e:
         return handle_error(e)
 
+logger = logging.getLogger(__name__)
+
 @bp.route('/chatbot', methods=['POST'])
 def chatbot():
-    message = request.json.get('message')
+    data = request.json
+    message = data.get('message')
+    user_id = data.get('user_id')
+    logger.debug(f"Received chatbot request for user {user_id} with message: {message}")
+    
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
     
     try:
-        response = get_chatbot_response(message)
+        response = get_chatbot_response(message, user_id)
+        logger.debug(f"Chatbot response for user {user_id}: {response}")
         return jsonify({"content": response}), 200
     except Exception as e:
-        return handle_error(e)
+        logger.error(f"Error in chatbot route: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/chatbot/history', methods=['GET'])
+def get_history():
+    user_id = request.args.get('user_id')
+    logger.debug(f"Received history request for user {user_id}")
+    
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+    
+    try:
+        history = get_conversation_history(user_id)
+        logger.debug(f"Returning history for user {user_id}: {history}")
+        return jsonify({"history": history}), 200
+    except Exception as e:
+        logger.error(f"Error in get_history route: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/chatbot/reset', methods=['POST'])
+def reset_chat():
+    data = request.json
+    user_id = data.get('user_id')
+    logger.debug(f"Received reset request for user {user_id}")
+    
+    if not user_id:
+        return jsonify({"error": "User ID is required"}), 400
+    
+    try:
+        clear_conversation_history(user_id)
+        logger.debug(f"Chat history cleared for user {user_id}")
+        return jsonify({"message": "Chat history cleared successfully"}), 200
+    except Exception as e:
+        logger.error(f"Error in reset_chat route: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    
+@bp.route('/gynecologist/chat', methods=['POST'])
+def send_message():
+    data = request.json
+    patient_id = data.get('patient_id')
+    gynecologist_id = data.get('gynecologist_id')
+    content = data.get('message')
+    is_from_patient = data.get('is_from_patient', False)  # Change default to False
+    
+    if not all([patient_id, gynecologist_id, content]):
+        return jsonify({"error": "Missing required fields"}), 400
+    
+    try:
+        message = save_message(patient_id, gynecologist_id, content, is_from_patient)
+        return jsonify({"message": "Message sent successfully", "id": message.id}), 200
+    except Exception as e:
+        logger.error(f"Error in send_message route: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    
+@bp.route('/gynecologist/chat/history', methods=['GET'])
+def get_chat_history_route():
+    patient_id = request.args.get('patient_id')
+    gynecologist_id = request.args.get('gynecologist_id')
+    
+    if not patient_id or not gynecologist_id:
+        return jsonify({"error": "Patient ID and Gynecologist ID are required"}), 400
+    
+    try:
+        history = get_chat_history(patient_id, gynecologist_id)
+        return jsonify(history), 200
+    except Exception as e:
+        logger.error(f"Error in get_chat_history_route: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    
+@bp.route('/gynecologist/conversations', methods=['GET'])
+def get_gynecologist_chats():
+    gynecologist_id = request.args.get('gynecologist_id')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    if not gynecologist_id:
+        return jsonify({"error": "Gynecologist ID is required"}), 400
+    
+    try:
+        conversations = get_gynecologist_conversations(gynecologist_id, page, per_page)
+        return jsonify(conversations), 200
+    except Exception as e:
+        logger.error(f"Error in get_gynecologist_chats route: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    
+@bp.route('/patient/gynecologist', methods=['GET'])
+def get_patient_gynecologist():
+    patient_id = request.args.get('patient_id')
+    
+    if not patient_id:
+        return jsonify({"error": "Patient ID is required"}), 400
+    
+    try:
+        pregnancy_info = PregnancyInfo.query.filter_by(user_id=patient_id).first()
+        if not pregnancy_info or not pregnancy_info.gynecologist_id:
+            return jsonify({"error": "No assigned gynecologist found for this patient."}), 404
+        
+        return jsonify({
+            "gynecologist_id": pregnancy_info.gynecologist_id,
+            "gynecologist_name": pregnancy_info.gynecologist.full_name
+        }), 200
+    except Exception as e:
+        logger.error(f"Error in get_patient_gynecologist route: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@bp.route('/patient/chat/history', methods=['GET'])
+def get_patient_chat_history():
+    patient_id = request.args.get('patient_id')
+    
+    if not patient_id:
+        return jsonify({"error": "Patient ID is required"}), 400
+    
+    try:
+        pregnancy_info = PregnancyInfo.query.filter_by(user_id=patient_id).first()
+        
+        if not pregnancy_info or not pregnancy_info.gynecologist_id:
+            return jsonify({"error": "No assigned gynecologist found for this patient."}), 404
+        
+        history = get_chat_history(patient_id, pregnancy_info.gynecologist_id)
+        return jsonify(history), 200
+    except Exception as e:
+        logger.error(f"Error in get_patient_chat_history route: {str(e)}")
+        return jsonify({"error": str(e)}), 500   
 
 @bp.route('/static/reports/<path:filename>')
 def serve_report(filename):
